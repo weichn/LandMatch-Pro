@@ -18,6 +18,7 @@ import PublicCasePool from "./components/PublicCasePool";
 import Footer from "./components/Footer";
 import OperationsDashboard from "./components/OperationsDashboard";
 import BackToTop from "./components/BackToTop";
+import CoverageStatus from "./components/CoverageStatus";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -117,6 +118,7 @@ const [authMode, setAuthMode] = useState("login");
         <HomeHero />
 
         <PublicCasePool />
+        <CoverageStatus />
         {loading && <p>帳號資料讀取中...</p>}
 
         {!loading && !session && showAuth && (

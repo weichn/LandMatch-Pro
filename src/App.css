@@ -754,3 +754,77 @@ footer {
   font-weight: 700;
   letter-spacing: 0.3px;
 }
+
+.coverage-status {
+  text-align: center;
+  background: #fffdf8;
+  border-top: 3px solid var(--moss);
+}
+
+.coverage-status h2 {
+  margin: 8px 0;
+}
+
+.coverage-description {
+  max-width: 720px;
+  margin: 0 auto 26px;
+}
+
+.coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  text-align: left;
+}
+
+.coverage-city {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 92px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.coverage-city strong {
+  color: var(--ink);
+}
+
+.coverage-city span {
+  font-size: 13px;
+}
+
+.coverage-city.is-active {
+  background: #f0f5ed;
+  border-color: #9caf99;
+}
+
+.coverage-city.is-active span {
+  color: #42623f;
+}
+
+.coverage-city.is-recruiting {
+  background: #fffaf1;
+}
+
+.coverage-city.is-recruiting span {
+  color: var(--brick);
+}
+
+.coverage-note {
+  margin: 24px auto 0;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .coverage-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .coverage-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
