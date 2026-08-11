@@ -924,3 +924,26 @@ footer {
     font-size: 12px;
   }
 }
+
+/* 品牌副標題與 LandMatch 左右對齊 */
+
+.site-brand > div {
+  display: inline-block;
+}
+
+.site-brand p {
+  display: block;
+  width: 100%;
+  margin: 5px 0 0;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: justify;
+  text-align-last: justify;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .site-brand p {
+    font-size: 13px;
+  }
+}
