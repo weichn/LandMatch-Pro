@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@600;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap");
 
 :root {
   --paper: #f6f1e6;
@@ -947,3 +947,30 @@ footer {
     font-size: 13px;
   }
 }
+
+/* ===== 全站統一楷書字體 ===== */
+
+html,
+body,
+body *,
+body *::before,
+body *::after {
+  font-family:
+    "LXGW WenKai TC",
+    "DFKai-SB",
+    "BiauKai",
+    "KaiTi",
+    serif !important;
+}
+
+/* 地政媒合通品牌字加粗 */
+
+/* 地政媒合通品牌字加粗並加強輪廓 */
+
+.site-brand h1 {
+  font-weight: 700 !important;
+  letter-spacing: 1.5px;
+  -webkit-text-stroke: 0.8px #1f332d;
+  text-shadow: 0 1px 0 rgba(31, 51, 45, 0.2);
+}
+

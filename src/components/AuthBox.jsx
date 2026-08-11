@@ -62,7 +62,7 @@ function AuthBox({ initialMode = "login" }) {
         return;
       }
 
-      setMessage("註冊成功，您已登入 LandMatch。");
+      setMessage("註冊成功，您已登入地政媒合通。");
       return;
     }
 
@@ -90,7 +90,9 @@ function AuthBox({ initialMode = "login" }) {
   return (
     <section className="auth-box">
       <h2>
-        {mode === "login" ? "🔐 登入 LandMatch" : "📝 註冊 LandMatch"}
+        {mode === "login"
+          ? "🔐 登入地政媒合通"
+          : "📝 註冊地政媒合通"}
       </h2>
 
       <p>
@@ -98,16 +100,22 @@ function AuthBox({ initialMode = "login" }) {
       </p>
 
       <div>
-  {mode === "login" ? (
-    <button type="button" onClick={() => switchMode("signup")}>
-      沒有帳號？前往註冊
-    </button>
-  ) : (
-    <button type="button" onClick={() => switchMode("login")}>
-      已有帳號？前往登入
-    </button>
-  )}
-</div>
+        {mode === "login" ? (
+          <button
+            type="button"
+            onClick={() => switchMode("signup")}
+          >
+            沒有帳號？前往註冊
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => switchMode("login")}
+          >
+            已有帳號？前往登入
+          </button>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit}>
         {mode === "signup" && (

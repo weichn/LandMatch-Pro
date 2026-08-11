@@ -132,7 +132,7 @@ const [authMode, setAuthMode] = useState("login");
         {!loading && session && (
           <section className="account-status">
             <h2>
-              👋 歡迎回來，{profile?.name || "LandMatch 使用者"}
+              👋 歡迎回來，{profile?.name || "地政媒合通使用者"}
             </h2>
 
             <p>

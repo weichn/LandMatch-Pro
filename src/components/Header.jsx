@@ -8,8 +8,8 @@ function Header({ onOpenAuth, isLoggedIn, onLogout }) {
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
           <div>
-            <h1>🏠 LandMatch</h1>
-            <p>全台地政士媒合平台</p>
+            <h1>🏠 地政媒合通</h1>
+            <p>LandMatch｜全台地政士媒合平台</p>
           </div>
         </button>
 

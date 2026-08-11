@@ -1,7 +1,7 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">LandMatch</string>
-    <string name="title_activity_main">LandMatch</string>
+    <string name="app_name">地政媒合通</string>
+    <string name="title_activity_main">地政媒合通</string>
     <string name="package_name">tw.landmatch.app</string>
     <string name="custom_url_scheme">tw.landmatch.app</string>
 </resources>

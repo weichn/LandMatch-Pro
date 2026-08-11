@@ -67,7 +67,7 @@ function HomeHero() {
           <h3>平台公開透明機制</h3>
 
           <p>
-            <strong>LandMatch 不經手交易、不抽取服務佣金。</strong>
+            <strong>地政媒合通不經手交易、不抽取服務佣金。</strong>
           </p>
 
           <p>
