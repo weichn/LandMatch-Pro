@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 function OperationsDashboard() {
-  const [stats, setStats] = useState(null);
+  const [todayStats, setTodayStats] = useState(null);
+  const [monthlyStats, setMonthlyStats] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -15,8 +16,9 @@ function OperationsDashboard() {
     setLoading(true);
     setErrorMessage("");
 
-    const [statsResult, messagesResult] = await Promise.all([
+    const [todayResult, monthlyResult, messagesResult] = await Promise.all([
       supabase.rpc("get_admin_operation_stats"),
+      supabase.rpc("get_admin_monthly_operation_stats"),
       supabase.rpc("get_admin_chat_messages", {
         p_limit: 500,
       }),
@@ -24,9 +26,15 @@ function OperationsDashboard() {
 
     setLoading(false);
 
-    if (statsResult.error) {
-      console.error("讀取營運統計失敗：", statsResult.error);
-      setErrorMessage("目前無法讀取營運統計資料。");
+    if (todayResult.error) {
+      console.error("讀取今日營運統計失敗：", todayResult.error);
+      setErrorMessage("目前無法讀取今日營運統計資料。");
+      return;
+    }
+
+    if (monthlyResult.error) {
+      console.error("讀取每月營運統計失敗：", monthlyResult.error);
+      setErrorMessage("目前無法讀取每月營運統計資料。");
       return;
     }
 
@@ -36,7 +44,8 @@ function OperationsDashboard() {
       return;
     }
 
-    setStats(statsResult.data?.[0] || null);
+    setTodayStats(todayResult.data?.[0] || null);
+    setMonthlyStats(monthlyResult.data?.[0] || null);
     setMessages(messagesResult.data || []);
   }
 
@@ -70,12 +79,96 @@ function OperationsDashboard() {
     return "未知身份";
   }
 
+  function renderTodayStats() {
+    return (
+      <div className="operation-stat-grid">
+        <div className="operation-stat">
+          <span>👀 今日瀏覽</span>
+          <strong>{todayStats.today_views}</strong>
+          <small>瀏覽分頁數</small>
+        </div>
+
+        <div className="operation-stat">
+          <span>📝 今日發文</span>
+          <strong>{todayStats.today_cases}</strong>
+          <small>新發布案件</small>
+        </div>
+
+        <div className="operation-stat">
+          <span>💳 今日交易</span>
+          <strong>{todayStats.today_top_up_count}</strong>
+          <small>已核准儲值訂單</small>
+        </div>
+
+        <div className="operation-stat">
+          <span>💰 今日交易金額</span>
+          <strong>{formatMoney(todayStats.today_top_up_amount)}</strong>
+          <small>已核准儲值金額</small>
+        </div>
+
+        <div className="operation-stat">
+          <span>🤝 今日核准媒合</span>
+          <strong>{todayStats.today_approved_matches}</strong>
+          <small>成功媒合案件</small>
+        </div>
+
+        <div className="operation-stat">
+          <span>💬 全站訊息</span>
+          <strong>{todayStats.total_messages}</strong>
+          <small>目前累積私聊訊息</small>
+        </div>
+      </div>
+    );
+  }
+
+  function renderMonthlyStats() {
+    return (
+      <div className="operation-stat-grid">
+        <div className="operation-stat monthly-stat">
+          <span>👀 本月瀏覽</span>
+          <strong>{monthlyStats.month_views}</strong>
+          <small>本月瀏覽分頁數</small>
+        </div>
+
+        <div className="operation-stat monthly-stat">
+          <span>📝 本月發文</span>
+          <strong>{monthlyStats.month_cases}</strong>
+          <small>本月新發布案件</small>
+        </div>
+
+        <div className="operation-stat monthly-stat">
+          <span>💳 本月交易</span>
+          <strong>{monthlyStats.month_top_up_count}</strong>
+          <small>本月已核准儲值訂單</small>
+        </div>
+
+        <div className="operation-stat monthly-stat">
+          <span>💰 本月交易金額</span>
+          <strong>{formatMoney(monthlyStats.month_top_up_amount)}</strong>
+          <small>本月已核准儲值金額</small>
+        </div>
+
+        <div className="operation-stat monthly-stat">
+          <span>🤝 本月核准媒合</span>
+          <strong>{monthlyStats.month_approved_matches}</strong>
+          <small>本月成功媒合案件</small>
+        </div>
+
+        <div className="operation-stat monthly-stat">
+          <span>💬 本月訊息</span>
+          <strong>{monthlyStats.month_messages}</strong>
+          <small>本月新增私聊訊息</small>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="operations-dashboard">
       <div className="dashboard-header">
         <div>
           <p className="pool-eyebrow">營運管理</p>
-          <h2>📊 今日平台總覽</h2>
+          <h2>📊 平台營運總覽</h2>
         </div>
 
         <button type="button" onClick={loadOperationsData}>
@@ -87,45 +180,21 @@ function OperationsDashboard() {
 
       {errorMessage && <p>{errorMessage}</p>}
 
-      {!loading && !errorMessage && stats && (
+      {!loading && !errorMessage && todayStats && monthlyStats && (
         <>
-          <div className="operation-stat-grid">
-            <div className="operation-stat">
-              <span>👀 今日瀏覽</span>
-              <strong>{stats.today_views}</strong>
-              <small>瀏覽分頁數</small>
-            </div>
-
-            <div className="operation-stat">
-              <span>📝 今日發文</span>
-              <strong>{stats.today_cases}</strong>
-              <small>新發布案件</small>
-            </div>
-
-            <div className="operation-stat">
-              <span>💳 今日交易</span>
-              <strong>{stats.today_top_up_count}</strong>
-              <small>已核准儲值訂單</small>
-            </div>
-
-            <div className="operation-stat">
-              <span>💰 今日交易金額</span>
-              <strong>{formatMoney(stats.today_top_up_amount)}</strong>
-              <small>已核准儲值金額</small>
-            </div>
-
-            <div className="operation-stat">
-              <span>🤝 今日核准媒合</span>
-              <strong>{stats.today_approved_matches}</strong>
-              <small>成功媒合案件</small>
-            </div>
-
-            <div className="operation-stat">
-              <span>💬 全站訊息</span>
-              <strong>{stats.total_messages}</strong>
-              <small>民眾與地政士私聊</small>
-            </div>
+          <div className="operation-overview-title">
+            <h3>☀️ 今日平台總覽</h3>
+            <p>即時掌握今天的網站與媒合狀況。</p>
           </div>
+
+          {renderTodayStats()}
+
+          <div className="operation-overview-title monthly-overview-title">
+            <h3>📅 本月平台總覽</h3>
+            <p>統計本月累積的營運表現。</p>
+          </div>
+
+          {renderMonthlyStats()}
 
           <div className="dashboard-card operation-message-list">
             <h3>💬 民眾與地政士訊息紀錄</h3>

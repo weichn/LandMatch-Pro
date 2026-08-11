@@ -828,3 +828,30 @@ footer {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.operation-overview-title {
+  margin-top: 26px;
+}
+
+.operation-overview-title h3 {
+  margin: 0 0 5px;
+  font-family: "Noto Serif TC", serif;
+  font-size: 24px;
+}
+
+.operation-overview-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.monthly-overview-title {
+  margin-top: 42px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+
+.monthly-stat {
+  background: #f2f6ef;
+  border-color: #b5c5b0;
+}
