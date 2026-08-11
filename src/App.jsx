@@ -145,9 +145,21 @@ const [authMode, setAuthMode] = useState("login");
   </p>
 )}
 
-            <button onClick={handleLogout}>
-              登出
-            </button>
+           <button
+  type="button"
+  onClick={() => {
+    window.location.href = "/delete-account.html";
+  }}
+>
+  申請刪除帳號
+</button>
+
+<button
+  type="button"
+  onClick={handleLogout}
+>
+  登出
+</button>
           </section>
         )}
 
