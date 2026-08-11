@@ -855,3 +855,72 @@ footer {
   background: #f2f6ef;
   border-color: #b5c5b0;
 }
+
+/* ===== 固定頂部導覽列 ===== */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(255, 252, 245, 0.97);
+  border-bottom: 1px solid #d8d2c5;
+  box-shadow: 0 4px 16px rgba(31, 51, 45, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+
+/* ===== 左側 LandMatch 品牌 ===== */
+
+.site-brand {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 8px 12px;
+  background: transparent;
+  color: #1f332d;
+  border: none;
+  border-radius: 10px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.site-brand:hover {
+  background: #f3eee3;
+  color: #1f332d;
+  transform: none;
+}
+
+.site-brand h1 {
+  margin: 0;
+  color: #1f332d;
+  font-family: "Noto Serif TC", serif;
+  font-size: 34px;
+  line-height: 1.15;
+  letter-spacing: 0.5px;
+}
+
+.site-brand p {
+  margin: 4px 0 0;
+  color: #a83a2b;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+
+/* ===== 手機版品牌大小 ===== */
+
+@media (max-width: 640px) {
+  .site-brand {
+    padding: 6px;
+  }
+
+  .site-brand h1 {
+    font-size: 24px;
+  }
+
+  .site-brand p {
+    font-size: 12px;
+  }
+}
