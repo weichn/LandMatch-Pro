@@ -1,32 +1,46 @@
-function Header({ onOpenAuth }) {
+function Header({ onOpenAuth, isLoggedIn, onLogout }) {
   return (
     <header className="site-header">
       <div className="header-inner">
-        <div className="site-brand">
-          
-
+        <button
+          type="button"
+          className="site-brand"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        >
           <div>
             <h1>🏠 LandMatch</h1>
             <p>全台地政士媒合平台</p>
           </div>
-        </div>
+        </button>
 
         <div className="header-actions">
-          <button
-            type="button"
-            className="header-login-button"
-            onClick={() => onOpenAuth("login")}
-          >
-            登入
-          </button>
+          {isLoggedIn ? (
+            <button
+              type="button"
+              className="header-login-button"
+              onClick={onLogout}
+            >
+              登出
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="header-login-button"
+                onClick={() => onOpenAuth("login")}
+              >
+                登入
+              </button>
 
-          <button
-            type="button"
-            className="header-signup-button"
-            onClick={() => onOpenAuth("signup")}
-          >
-            免費註冊
-          </button>
+              <button
+                type="button"
+                className="header-signup-button"
+                onClick={() => onOpenAuth("signup")}
+              >
+                免費註冊
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

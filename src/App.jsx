@@ -112,7 +112,11 @@ const [authMode, setAuthMode] = useState("login");
 
   return (
     <div>
-      <Header onOpenAuth={openAuth} />
+      <Header
+  onOpenAuth={openAuth}
+  isLoggedIn={Boolean(session)}
+  onLogout={handleLogout}
+/>
 
       <main>
         <HomeHero />
