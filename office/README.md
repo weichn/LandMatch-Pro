@@ -46,4 +46,14 @@ Office 採獨立登入儲存鍵 `landmatch-office-auth-v1`；相同 Supabase 專
 
 正式公開入口：https://landmatch-office.vercel.app/ 。使用未登入 Vercel 的 HTTP 請求確認回傳工作台 HTML（200）。較長的部署 alias 受 Vercel 登入保護，不應作為使用者入口。
 
-全部專用測試資料與測試帳號已清除。GitHub connector 回傳 403 Resource not accessible by integration，未建立遠端分支或 PR；程式以原始碼壓縮檔交付。
+全部專用測試資料與測試帳號已清除。原始碼位於 codex/office-workspace；草稿 PR：https://github.com/weichn/LandMatch-Pro/pull/1 。Office 的 Vercel 專案已連接此分支，Root Directory 為 office，Framework 為 Vite。main 未合併。
+
+## 謄本匯入核對（2026-09-27）
+
+入口：`/?import`，或登入後選擇「謄本匯入」。以 PDF.js 在瀏覽器記憶體解析文字層及顯示原頁，文件不傳送到伺服器，沒有 localStorage 或 IndexedDB 文件快取。只接受 20 MB、40 頁以內 PDF。
+
+支援土地、建物標示、所有權人、共有部分及他項權利的基本欄位，保留來源頁碼與欄位原文。欄位可修改，修改後取消已核對狀態；逐欄核對後可下載 JSON 草稿。個人統一編號不擷取，遮蔽姓名不還原、不自動合併客戶；原始 PDF 只在原頁預覽中顯示。
+
+此版是匯入核對階段，尚未完成正式案件／客戶資料庫入檔、掃描 OCR 或戶籍謄本辨識。缺少文字層的住址會警示，不能把缺漏當作原文空白。共有部分面積不與主建物面積混算；共同擔保權利不跨土地／建物加總。支援格式仍需以更多不同謄本驗證。
+
+驗證：`node --test src/transcript.test.js`（6 個測試）、`npm run build`；實際六頁範例在本機帶出 2 筆標的、76 個待核對欄位。瀏覽器已驗證原頁翻頁、欄位修改取消核對狀態、未核對禁止下載，無應用程式錯誤。測試原檔、抽取資料及個資不放入 Git。

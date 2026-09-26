@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+const TranscriptImport = lazy(() => import('./TranscriptImport')); 
 import { db } from './client';
 import { definitions, statusLabels, roleLabels, payloadFor, errorText } from './model';
 
@@ -77,12 +78,12 @@ function Workspace({user}) {
  const membership=memberships?.find(m=>m.office_id===officeId);
  return <div className="workspace"><aside className="sidebar"><div className="sidebar-label">我的事務所</div>
  {memberships?.length>0&&<label className="office-switch"><span className="sr-only">切換事務所</span><select value={officeId} onChange={e=>setOfficeId(e.target.value)}>{memberships.map(m=><option key={m.id} value={m.office_id}>{m.offices?.name||'事務所'}</option>)}</select></label>}
- <nav aria-label="工作台功能">{[['office_cases','▤','案件管理'],['contacts','◎','聯絡人'],['organizations','▦','往來組織'],['settings','⚙','事務所設定']].map(([id,icon,label])=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>setTab(id)} aria-current={tab===id?'page':undefined}><span>{icon}</span>{label}</button>)}</nav>
+ <nav aria-label="工作台功能">{[['import','↥','謄本匯入'],['office_cases','▤','案件管理'],['contacts','◎','聯絡人'],['organizations','▦','往來組織'],['settings','⚙','事務所設定']].map(([id,icon,label])=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>setTab(id)} aria-current={tab===id?'page':undefined}><span>{icon}</span>{label}</button>)}</nav>
  <div className="user-panel"><span className="role-badge">{roleLabels[membership?.role]||'Office 帳號'}</span><p>{user.email}</p><button className="text-button" onClick={logout} disabled={signingOut}>{signingOut?'登出中…':'登出工作台'}</button></div></aside>
  <main className="workspace-main"><Notice error>{error}</Notice>{error&&<button onClick={()=>setRevision(v=>v+1)}>重試讀取</button>}
  {!memberships&&!error&&<p role="status">讀取事務所中…</p>}
  {memberships?.length===0&&<Onboarding onCreated={()=>setRevision(v=>v+1)}/>}
- {membership && (tab==='settings'?<Settings key={officeId} membership={membership} onSaved={()=>setRevision(v=>v+1)}/>:<Records key={officeId+tab} table={tab} membership={membership}/>)}
+ {membership && (tab==='import'?<Suspense fallback={<p>載入謄本匯入…</p>}><TranscriptImport key={officeId}/></Suspense>:tab==='settings'?<Settings key={officeId} membership={membership} onSaved={()=>setRevision(v=>v+1)}/>:<Records key={officeId+tab} table={tab} membership={membership}/>)}
  </main></div>;
 }
 function Onboarding({onCreated}) {
@@ -198,3 +199,4 @@ function Settings({membership,onSaved}) {
  }
  return <><div className="page-heading"><div><div className="eyebrow">OFFICE / SETTINGS</div><h1>事務所設定</h1><p>維護工作空間的基本資訊。</p></div></div><section className="settings-card"><form onSubmit={submit}><fieldset disabled={!writable||busy} className="form-grid">{[['name','事務所名稱','text',200],['phone','電話','tel',100],['email','Email','email',254],['address','地址','text',500]].map(([k,label,type,max])=><label key={k}>{label}<input name={k} type={type} defaultValue={office[k]||''} required={k==='name'} maxLength={max}/></label>)}</fieldset><Notice error>{error}</Notice><Notice>{message}</Notice>{writable&&<button className="primary" disabled={busy}>{busy?'儲存中…':'儲存設定'}</button>}</form></section><section className="settings-card"><h2>我的成員資格</h2><p>目前權限：{roleLabels[membership.role]}</p><p className="form-note">本階段尚未開放邀請成員與變更角色；需要調整時，請由受信任的管理端處理。</p></section></>;
 }
+
