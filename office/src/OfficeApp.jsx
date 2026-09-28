@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-const TranscriptImport = lazy(() => import('./TranscriptImport')); 
+const TranscriptImport = lazy(() => import('./TranscriptImport'));
+const CaseTranscripts = lazy(() => import('./CaseTranscripts'));
 import { db } from './client';
 import { definitions, statusLabels, roleLabels, payloadFor, errorText } from './model';
 
@@ -102,6 +103,7 @@ function Records({table,membership}) {
  const canWrite=['owner','admin','staff'].includes(membership.role), canDelete=['owner','admin'].includes(membership.role);
  const [rows,setRows]=useState([]),[total,setTotal]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState('');
  const [search,setSearch]=useState(''),[query,setQuery]=useState(''),[page,setPage]=useState(0),[revision,setRevision]=useState(0);
+ const [transcriptCase,setTranscriptCase]=useState(null);
  const [editor,setEditor]=useState(null),[deleting,setDeleting]=useState(null),[message,setMessage]=useState('');
  useEffect(()=>{const timer=setTimeout(()=>{setQuery(search.trim());setPage(0);},250);return()=>clearTimeout(timer);},[search]);
  useEffect(()=>{
@@ -122,9 +124,10 @@ function Records({table,membership}) {
  <div className="list-toolbar"><label className="search"><span className="sr-only">搜尋{def.label}名稱</span><input value={search} onChange={e=>{setSearch(e.target.value);setLoading(e.target.value.trim()!==query);}} placeholder={'搜尋'+def.label+'名稱…'} maxLength={100}/></label><span>{loading?'讀取中…':total+' 筆資料'}</span><button className="quiet" onClick={()=>refresh('')}>重新整理</button></div>
  <Notice error>{error}</Notice><Notice>{message}</Notice>
  {loading?<div className="empty" role="status">讀取資料中…</div>:!rows.length?<div className="empty"><span className="empty-symbol">{table==='office_cases'?'▤':'◎'}</span><h2>{query?'沒有符合的結果':'尚未建立'+def.label}</h2><p>{query?'試試其他名稱。':canWrite?'從新增第一筆資料開始，逐步整理你的事務所。':'目前沒有可檢視的資料。'}</p>{canWrite&&!query&&<button onClick={()=>setEditor({})}>新增{def.label}</button>}</div>:
- <div className="table-wrap"><table><thead><tr>{table==='office_cases'&&<th>案號</th>}<th>{def.label}名稱</th><th>{table==='office_cases'?'進度':'電話'}</th><th>{table==='office_cases'?'類型':'Email'}</th><th>更新日期</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>{rows.map(row=><tr key={row.id}>{table==='office_cases'&&<td className="case-number">{row.case_number}</td>}<td><button className="record-name" onClick={()=>setEditor(row)}>{row[def.name]}</button></td><td>{table==='office_cases'?<span className={'status '+row.status}>{statusLabels[row.status]}</span>:row.phone||'—'}</td><td>{table==='office_cases'?row.case_type:row.email||'—'}</td><td>{new Date(row.updated_at).toLocaleDateString('zh-TW')}</td><td>{canDelete&&<button className="text-button danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>}</td></tr>)}</tbody></table></div>}
+ <div className="table-wrap"><table><thead><tr>{table==='office_cases'&&<th>案號</th>}<th>{def.label}名稱</th><th>{table==='office_cases'?'進度':'電話'}</th><th>{table==='office_cases'?'類型':'Email'}</th><th>更新日期</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>{rows.map(row=><tr key={row.id}>{table==='office_cases'&&<td className="case-number">{row.case_number}</td>}<td><button className="record-name" onClick={()=>setEditor(row)}>{row[def.name]}</button></td><td>{table==='office_cases'?<span className={'status '+row.status}>{statusLabels[row.status]}</span>:row.phone||'—'}</td><td>{table==='office_cases'?row.case_type:row.email||'—'}</td><td>{new Date(row.updated_at).toLocaleDateString('zh-TW')}</td><td>{table==='office_cases'&&<button className="text-button" onClick={()=>setTranscriptCase(row)}>地籍資料</button>}{canDelete&&<button className="text-button danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>}</td></tr>)}</tbody></table></div>}
  <div className="pagination"><button disabled={page===0||loading} onClick={()=>{setLoading(true);setPage(p=>p-1);}}>上一頁</button><span>第 {page+1} 頁</span><button disabled={(page+1)*20>=total||loading} onClick={()=>{setLoading(true);setPage(p=>p+1);}}>下一頁</button></div>
  {editor&&<RecordEditor table={table} row={editor} officeId={officeId} canWrite={canWrite} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);refresh('資料已儲存。');}}/>}
+ {transcriptCase&&<Modal title={transcriptCase.case_number+"｜案件地籍資料"} onClose={()=>setTranscriptCase(null)}><Suspense fallback={<p>載入案件資料…</p>}><CaseTranscripts officeId={officeId} caseId={transcriptCase.id}/></Suspense></Modal>}
  {deleting&&<DeleteDialog table={table} row={deleting} officeId={officeId} onClose={()=>setDeleting(null)} onDeleted={()=>{setDeleting(null);refresh('資料已刪除。');}}/>}
  </>;
 }
@@ -199,4 +202,3 @@ function Settings({membership,onSaved}) {
  }
  return <><div className="page-heading"><div><div className="eyebrow">OFFICE / SETTINGS</div><h1>事務所設定</h1><p>維護工作空間的基本資訊。</p></div></div><section className="settings-card"><form onSubmit={submit}><fieldset disabled={!writable||busy} className="form-grid">{[['name','事務所名稱','text',200],['phone','電話','tel',100],['email','Email','email',254],['address','地址','text',500]].map(([k,label,type,max])=><label key={k}>{label}<input name={k} type={type} defaultValue={office[k]||''} required={k==='name'} maxLength={max}/></label>)}</fieldset><Notice error>{error}</Notice><Notice>{message}</Notice>{writable&&<button className="primary" disabled={busy}>{busy?'儲存中…':'儲存設定'}</button>}</form></section><section className="settings-card"><h2>我的成員資格</h2><p>目前權限：{roleLabels[membership.role]}</p><p className="form-note">本階段尚未開放邀請成員與變更角色；需要調整時，請由受信任的管理端處理。</p></section></>;
 }
-
