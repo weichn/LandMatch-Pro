@@ -69,3 +69,15 @@ Office 採獨立登入儲存鍵 `landmatch-office-auth-v1`；相同 Supabase 專
 驗證：解析／草稿單元測試 12/12；`database/transcript_storage.test.sql` 36/36（交易回滾），涵蓋未登入、非成員、跨事務所、唯讀／停權／匿名身分、無效資料、作者偽造、重試與原子建案。瀏覽器以合成資料實際登入、存入既有案件、新建並存入案件，再由案件管理重新開啟，正確回讀面積及所有權人。測試資料及帳號已清除；正式建置通過。
 
 舊四表政策雜湊維持 `bf567b0e9758ec5ad7d6e75812507bec`。Security advisors 無新增警告；仍有既有的 [leaked-password protection 未啟用](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)。
+
+## 本機掃描辨識試用版（2026-09-30）
+
+少於 30 個非空白字元的頁面自動以影像辨識；若文字層不完整，可選「整份以影像辨識」後重新選檔或按「重新讀取此 PDF」。重新讀取會清除本頁核對。每頁最高 800 萬像素／長邊 4000 像素、最多 40 頁，每頁含初始化最多 180 秒，可取消讀取。
+
+使用 Tesseract.js 7.0.0 和 chi_tra 1.0.0 的 4.0.0_best_int 模型；`predev`／`prebuild` 從固定 npm 依賴複製模型、worker、WASM 到本站 `/ocr/`，不用外部辨識 API／CDN，停用模型 IndexedDB 快取。原始文件只在本機記憶體處理；只有明確確認案件入檔才傳送白名單欄位。
+
+每個辨識欄位都標示影像来源、預設未核對；缺少面積提供空欄，不能未填即匯出。無法確認任何掃描頁地號／建號時整份停止，避免承接上一頁標的。下載草稿也套用儲存前驗證，拒絕常見身分證格式及不完整必填資料。
+
+驗證：16 項單元測試通過；純影像合成 PDF 實際辨識出 9 欄（含面積、小數點、所有權人、住址、權利範圍），瀏覽器原頁預覽及逐欄確認通過。`node scripts/verify-ocr.mjs <synthetic.pdf>` 可驗證影像 PDF → OCR → 解析 → 核對限制 → 可儲存欄位，不寫入資料庫。
+
+限制：既有六頁複雜底紋範例改以影像辨識時，標題仍辨識失敗，已被阻擋，不能宣稱通用 OCR 準確率；該範例應繼續使用原本文字層及已核對草稿。戶籍辨識、客戶主檔合併尚未完成。本次無資料庫異動，未重跑資料庫 advisors。參考 [Tesseract API](https://github.com/naptha/tesseract.js/blob/master/docs/api.md)；授權檔隨建置輸出。

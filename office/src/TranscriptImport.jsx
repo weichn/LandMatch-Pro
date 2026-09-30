@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { allFields, parseTranscript, textItemsToLines } from './transcript';
-import {readReviewedDraft} from './transcriptDraft';
+import {readReviewedDraft,toStoragePayload} from './transcriptDraft';
 import SaveTranscript from './SaveTranscript';
+import {createOcrSession,needsOcr} from './transcriptOcr';
 import './transcript.css';
 
 export default function TranscriptImport() {
  const [result,setResult]=useState(null),[fileName,setFileName]=useState(''),[status,setStatus]=useState(''),[error,setError]=useState(''),[page,setPage]=useState(1),[busy,setBusy]=useState(false);
  const pdf=useRef(null),task=useRef(null),canvas=useRef(null),generation=useRef(0),pending=useRef(false);
+ const ocr=useRef(null),cancelled=useRef(false);
+ const selectedFile=useRef(null);
+ const [forceOcr,setForceOcr]=useState(false);
  const [documentVersion,setDocumentVersion]=useState(0);
- useEffect(()=>()=>{generation.current++;task.current?.destroy();},[]);
+ useEffect(()=>()=>{generation.current++;ocr.current?.cancel();task.current?.destroy().catch(()=>{});},[]);
  useEffect(()=>{
   if(!pdf.current||!canvas.current)return;
   let cancelled=false,render;
@@ -24,6 +28,8 @@ export default function TranscriptImport() {
  async function read(file){
   if(!file||pending.current)return;
   pending.current=true;setBusy(true);
+  selectedFile.current=/\.pdf$/i.test(file.name)?file:null;
+  cancelled.current=false;
   const id=++generation.current;
   setResult(null);setError('');setStatus('');setFileName('');
   try{
@@ -43,25 +49,43 @@ export default function TranscriptImport() {
    if(id!==generation.current){await loading.destroy();return;}
    pdf.current=doc;
    if(doc.numPages>40)throw new Error('too-many-pages');
-   const pages=[];
+   const pages=[],ocrPages=[];
+   let ocrPage=0;
    for(let n=1;n<=doc.numPages;n++){
+    if(cancelled.current||id!==generation.current)throw new Error('ocr-cancelled');
     setStatus(`正在讀取第 ${n}／${doc.numPages} 頁…`);
-    const p=await doc.getPage(n);const content=await p.getTextContent();pages.push(textItemsToLines(content.items));
+    const p=await doc.getPage(n);const content=await p.getTextContent();
+    let lines=textItemsToLines(content.items);
+    if(forceOcr||needsOcr(lines)){
+     ocrPage=n;
+     if(!ocr.current)ocr.current=createOcrSession((progress,stage)=>{
+      if(id===generation.current&&!cancelled.current)setStatus(stage==='recognizing text'?`正在本機辨識第 ${ocrPage}／${doc.numPages} 頁… ${Math.round(progress*100)}%`:'正在載入本機辨識工具與繁體中文模型，首次使用可能較久…');
+     });
+     const scanned=await ocr.current.recognize(p);
+     lines=scanned.lines;ocrPages.push(n);
+    }
+    pages.push(lines);
    }
+   if(cancelled.current)throw new Error('ocr-cancelled');
    if(id!==generation.current)return;
-   const parsed=parseTranscript(pages);
+   const parsed=parseTranscript(pages,{ocrPages});
    if(!parsed.properties.length)throw new Error('no-properties');
    setFileName(file.name);setPage(1);setResult(parsed);setDocumentVersion(v=>v+1);setStatus('資料已帶入，請逐欄核對，再於下方選擇正式案件儲存。');
   }catch(e){
    await task.current?.destroy().catch(()=>{});task.current=null;pdf.current=null;setStatus('');
-   if(id===generation.current)setError(/\.json$/i.test(file.name)?(e instanceof SyntaxError?'草稿不是有效的 JSON 檔，請選擇工作台下載的核對草稿。':e.message):e.name==='PasswordException'?'這份 PDF 有密碼，請先在本機解鎖後再選取。':e.message==='too-many-pages'?'一次最多讀取 40 頁，請先分檔。':'無法辨識此檔案的土地／建物文字層。可能是掃描檔或不支援的格式，請勿視為空白謄本。');
-  }finally{pending.current=false;if(id===generation.current){setBusy(false);}}
+   if(id===generation.current){
+    if(cancelled.current||e.message==='ocr-cancelled')setStatus('已取消，沒有傳送或儲存文件資料。');
+    else setError(/\.json$/i.test(file.name)?(e instanceof SyntaxError?'草稿不是有效的 JSON 檔，請選擇工作台下載的核對草稿。':e.message):e.name==='PasswordException'?'這份 PDF 有密碼，請先在本機解鎖後再選取。':e.message==='too-many-pages'?'一次最多讀取 40 頁，請先分檔。':e.message?.startsWith('ocr-heading:')?`第 ${e.message.split(':')[1]} 頁影像辨識無法確認地號／建號，已停止匯入，避免歸入錯誤標的。請使用較清晰、正向的掃描檔。`:e.message==='ocr-timeout'?'影像辨識逾時，請分成較少頁數或使用更清晰的檔案再試。':'未能完成辨識。請確認網路可載入辨識工具，使用清晰且正向的土地／建物謄本再試；無法讀取不代表謄本空白。');
+   }
+  }finally{ocr.current?.cancel();ocr.current=null;pending.current=false;if(id===generation.current){setBusy(false);}}
  }
+ function cancelRead(){cancelled.current=true;ocr.current?.cancel();void task.current?.destroy().catch(()=>{});}
  function change(field,patch){setResult(current=>{
   const next=structuredClone(current);
   const i=allFields(current).indexOf(field);Object.assign(allFields(next)[i],patch);return next;
  });}
  function exportDraft(){
+  try{toStoragePayload(result);}catch(e){setError(e.message);return;}
   // Explicit local download only. Never export original text, PDF, or identity number.
   const clean=structuredClone(result);allFields(clean).forEach(f=>delete f.source);
   const url=URL.createObjectURL(new Blob([JSON.stringify({...clean,status:'reviewed-local-draft',exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}));
@@ -75,9 +99,12 @@ export default function TranscriptImport() {
  const fields=result?allFields(result):[],reviewed=fields.filter(f=>f.reviewed).length;
  return <section className="transcript-import">
   <a href="/">← 返回 Office 工作台</a><div className="eyebrow">DOCUMENT TO DATA</div><h1>從謄本，自動帶入資料</h1>
-  <p>選取電子地籍謄本，先帶出土地、建物、所有權人與他項權利，再對照原文核對。</p>
+  <p>選取電子或掃描地籍謄本，先帶出土地、建物、所有權人與他項權利，再對照原文核對。</p>
+  <label className="review-check"><input type="checkbox" checked={forceOcr} disabled={busy} onChange={e=>setForceOcr(e.target.checked)}/>整份以影像辨識（適用文字層缺漏；需重新選檔）</label>
   <div className="transcript-upload"><label>選取謄本 PDF<input aria-label="選取謄本 PDF" type="file" accept="application/pdf,.pdf" disabled={busy} onChange={e=>{read(e.target.files?.[0]);e.target.value='';}}/></label><label>或讀回已核對草稿<input aria-label="讀回已核對草稿" type="file" accept="application/json,.json" disabled={busy} onChange={e=>{read(e.target.files?.[0]);e.target.value='';}}/></label><small>選檔只在本機解析。按下「確認存入正式案件」才傳送核對資料，原始 PDF 不上傳；未儲存前離開或重新整理會清除。</small></div>
-  {status&&<p role="status">{status}</p>}{error&&<p className="notice error" role="alert">{error}</p>}
+  <p>無文字頁面會自動在本機辨識。影像辨識目前為試用功能，複雜底紋或模糊掃描可能無法讀取。首次使用需下載辨識工具，最多 40 頁。</p>
+  {selectedFile.current&&!busy&&<button type="button" onClick={()=>read(selectedFile.current)}>重新讀取此 PDF（清除本頁核對）</button>}
+  {status&&<p role="status">{status}</p>}{busy&&<button type="button" onClick={cancelRead}>取消讀取</button>}{error&&<p className="notice error" role="alert">{error}</p>}
   {result&&<><div className="transcript-summary"><strong>{fileName}</strong><span>{result.pageCount} 頁 · {result.properties.length} 筆標的 · 已核對 {reviewed}／{fields.length} 欄</span></div>
    <div className="notice"><strong>需要確認</strong><ul>{[...new Set(result.warnings)].map(w=><li key={w}>{w}</li>)}</ul></div>
    <SaveTranscript key={documentVersion} result={result}/>

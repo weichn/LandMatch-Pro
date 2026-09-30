@@ -16,7 +16,7 @@ export function textItemsToLines(items) {
 const compact=s=>normalize(s).replace(/\s/g,'');
 const value=(s,re)=>s.match(re)?.[1]||'';
 const num=s=>s.replace(/[,＊*]/g,'');
-export function parseTranscript(pages) {
+export function parseTranscript(pages,{ocrPages=[]}={}) {
  const result={version:1,properties:[],warnings:[],pageCount:pages.length};
  let property=null,section='',owner=null,right=null;
  function field(target,key,label,v,page,source) {
@@ -29,6 +29,9 @@ export function parseTranscript(pages) {
   const pageNo=index+1;
   const lines=(Array.isArray(page)?page:page.split('\n')).map(normalize).filter(Boolean);
   const heading=lines.map(compact).map(l=>l.match(/^(.+?[區鄉鎮市])(.+?段(?:.+?小段)?)(\d{4,5}-\d{3,4})(地號|建號)$/)).find(Boolean);
+  if(!heading&&ocrPages.includes(pageNo)){
+   throw new Error(`ocr-heading:${pageNo}`);
+  }
   if(heading){
    const key=heading[1]+heading[2]+heading[3]+heading[4];
    if(property?.key!==key){
@@ -97,13 +100,21 @@ export function parseTranscript(pages) {
   }
  });
  for(const p of result.properties){
+  if(!p.owners.length)result.warnings.push(`${p.kind}未帶出所有權人，請查看原頁；沒有欄位不代表沒有所有權記載。`);
   for(const o of p.owners){
    if(o.fields.some(f=>f.key==='name'&&/[*＊]/.test(f.value)))result.warnings.push(`${p.kind}所有權人姓名已遮蔽，不能據此確定完整客戶身分。`);
    if(!o.fields.some(f=>f.key==='address'))result.warnings.push(`${p.kind}所有權人住址未從文字層讀出，請查看原頁；缺漏不代表原文空白。`);
   }
-  if(!p.fields.some(f=>f.key==='area'))result.warnings.push(`${p.kind}面積未辨識，請人工核對。`);
+  if(!p.fields.some(f=>f.key==='area')){
+   result.warnings.push(`${p.kind}面積未辨識，請人工核對。`);
+   if(ocrPages.some(n=>p.pages.includes(n)))p.fields.push({key:'area',label:'面積（㎡）',value:'',page:p.pages[0],source:'未辨識，請對照原頁填入。',reviewed:false});
+  }
  }
- result.warnings.push('本版讀取 PDF 文字層；掃描影像、戶籍謄本與影像內文字尚未完成辨識。所有欄位均須核對。','土地、建物的共同擔保可能是同一筆權利；未自動加總抵押金額，也不代表目前貸款餘額。');
+ if(ocrPages.length){
+  result.warnings.push(`第 ${ocrPages.join('、')} 頁使用影像辨識，數字、小數點及姓名可能有誤，請逐欄對照原頁。未辨識的欄位不代表原文空白。`);
+  allFields(result).forEach(f=>{if(ocrPages.includes(f.page))f.source='影像辨識（須核對）：'+f.source;});
+ }
+ result.warnings.push('所有欄位均須核對；戶籍謄本尚不支援。文字層內缺少的影像文字，可重選「整份以影像辨識」再讀取，原核對狀態不會保留。','土地、建物的共同擔保可能是同一筆權利；未自動加總抵押金額，也不代表目前貸款餘額。');
  return result;
 }
 export function allFields(result){return result.properties.flatMap(p=>[...p.fields,...[...p.owners,...p.common,...p.rights].flatMap(r=>r.fields)]);}
