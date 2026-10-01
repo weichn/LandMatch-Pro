@@ -1,8 +1,8 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 const TranscriptImport = lazy(() => import('./TranscriptImport'));
 const CaseTranscripts = lazy(() => import('./CaseTranscripts'));
 import { db } from './client';
-import { definitions, statusLabels, roleLabels, payloadFor, errorText } from './model';
+import { definitions, statusLabels, roleLabels, caseTypes, payloadFor, errorText } from './model';
 
 const marketplace = 'https://land-match-pro.vercel.app/';
 function Notice({ children, error = false }) {
@@ -132,12 +132,13 @@ function Records({table,membership}) {
  </>;
 }
 function Modal({title,children,onClose,busy=false}) {
- const ref=useRef(null);
+ const ref=useRef(null),titleId=useId();
  useEffect(()=>{const el=ref.current;el.showModal();return()=>el.close();},[]);
- return <dialog ref={ref} className="modal" aria-labelledby="dialog-title" onCancel={e=>{e.preventDefault();if(!busy)onClose();}}><div className="modal-header"><h2 id="dialog-title">{title}</h2><button aria-label="關閉" disabled={busy} onClick={onClose}>✕</button></div>{children}</dialog>;
+ return <dialog ref={ref} className="modal" aria-labelledby={titleId} onCancel={e=>{e.preventDefault();if(!busy)onClose();}}><div className="modal-header"><h2 id={titleId}>{title}</h2><button aria-label="關閉" disabled={busy} onClick={onClose}>✕</button></div>{children}</dialog>;
 }
-function RelationField({kind,value,onChange,officeId,disabled,label}) {
+function RelationField({kind,value,onChange,officeId,disabled,label,onCreate,revision=0}) {
  const [search,setSearch]=useState(''),[options,setOptions]=useState([]),[error,setError]=useState(''),[selected,setSelected]=useState(null);
+ const [loading,setLoading]=useState(true),[retry,setRetry]=useState(0),[selectedError,setSelectedError]=useState(false);
  const name=definitions[kind].name;
  useEffect(()=>{
   const controller=new AbortController();
@@ -145,22 +146,23 @@ function RelationField({kind,value,onChange,officeId,disabled,label}) {
    let q=db.from(kind).select('id,'+name).eq('office_id',officeId).order(name).limit(50);
    if(search.trim())q=q.ilike(name,'%'+search.trim().replace(/[\\%_]/g,'\\$&')+'%');
    q.abortSignal(controller.signal).then(({data,error})=>{
-    if(!controller.signal.aborted){setOptions(data||[]);setError(error?'無法讀取選項，請稍後重試。':'');}
-   });
+    if(!controller.signal.aborted){setLoading(false);setOptions(data||[]);setError(error?'無法讀取選項，請稍後重試。':'');}
+   }).catch(()=>{if(!controller.signal.aborted){setLoading(false);setError('連線失敗，請重新讀取選項。');}});
   },250);
   return()=>{clearTimeout(timer);controller.abort();};
- },[kind,name,officeId,search]);
+ },[kind,name,officeId,search,revision,retry]);
  useEffect(()=>{
   if(!value)return;
   const controller=new AbortController();
-  db.from(kind).select('id,'+name).eq('office_id',officeId).eq('id',value).maybeSingle().abortSignal(controller.signal).then(({data})=>{if(!controller.signal.aborted)setSelected(data);});
+  db.from(kind).select('id,'+name).eq('office_id',officeId).eq('id',value).maybeSingle().abortSignal(controller.signal).then(({data,error})=>{if(!controller.signal.aborted){setSelected(data);setSelectedError(!!error||!data);}}).catch(()=>{if(!controller.signal.aborted)setSelectedError(true);});
   return()=>controller.abort();
- },[kind,name,officeId,value]);
+ },[kind,name,officeId,value,retry]);
  const items=selected && selected.id===value && !options.some(o=>o.id===value)?[selected,...options]:options;
- return <div className="relation"><label>搜尋{label}<input disabled={disabled} value={search} onChange={e=>setSearch(e.target.value)} placeholder="輸入名稱縮小選項（最多顯示 50 筆）"/></label><label>{label}<select value={value||''} onChange={e=>onChange(e.target.value)} disabled={disabled}><option value="">未指定</option>{value&&!items.some(o=>o.id===value)&&<option value={value}>已選資料（讀取中）</option>}{items.map(item=><option key={item.id} value={item.id}>{item[name]}</option>)}</select></label><Notice error>{error}</Notice></div>;
+ return <div className="relation"><label>搜尋{label}<input disabled={disabled} value={search} onChange={e=>{setSearch(e.target.value);setLoading(true);}} placeholder="輸入名稱縮小選項（最多顯示 50 筆）"/></label><label>{label}<select value={value||''} onChange={e=>{setSelectedError(false);onChange(e.target.value);}} disabled={disabled}><option value="">未指定</option>{value&&!items.some(o=>o.id===value)&&<option value={value}>{selectedError?'已選資料無法讀取（保留原選擇）':'已選資料（讀取中）'}</option>}{items.map(item=><option key={item.id} value={item.id}>{item[name]}</option>)}</select></label>{loading?<small role="status">讀取選項中…</small>:!error&&!options.length&&<small>{search.trim()?'沒有符合搜尋的資料。':'尚未建立'+definitions[kind].label+'，可直接在此新增。'}</small>}<Notice error>{error}</Notice>{(error||selectedError)&&<button type="button" disabled={disabled} onClick={()=>{setLoading(true);setRetry(v=>v+1);}}>重新讀取選項</button>}{onCreate&&!disabled&&<button type="button" onClick={()=>onCreate(search.trim())}>＋ 新增{definitions[kind].label}</button>}</div>;
 }
-function RecordEditor({table,row,officeId,canWrite,onClose,onSaved}) {
- const def=definitions[table];const [form,setForm]=useState({...row,status:row.status||'draft',case_type:row.case_type||'other'});
+export function RecordEditor({table,row,officeId,canWrite,onClose,onSaved,quick=false}) {
+ const def=definitions[table];const [form,setForm]=useState({...row,status:row.status||'draft',case_type:row.case_type||''});
+ const [creating,setCreating]=useState(null),[relationRevision,setRelationRevision]=useState(0),[message,setMessage]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');const pending=useRef(false);
  const update=(key,value)=>setForm(f=>({...f,[key]:value}));
  async function submit(e){
@@ -172,13 +174,15 @@ function RecordEditor({table,row,officeId,canWrite,onClose,onSaved}) {
    const {data,error}=await request.select('id');
    if(error)setError(errorText(error));
    else if(data.length!==1)setError('資料已被修改，或你的權限已變更。請關閉視窗並重新整理。');
-   else onSaved();
+   else onSaved({...values,id:data[0].id});
   }catch{setError('儲存未完成，請稍後重試。');}finally{pending.current=false;setBusy(false);}
  }
- return <Modal title={(row.id?(canWrite?'編輯':'檢視'):'新增')+def.label} onClose={onClose} busy={busy}><form onSubmit={submit}><fieldset disabled={busy||!canWrite} className="form-grid">
- {def.fields.map(([key,label,type,max,required])=>['contacts','organizations'].includes(type)?<RelationField key={key} kind={type} value={form[key]} onChange={v=>update(key,v)} officeId={officeId} disabled={busy||!canWrite} label={label}/>:<label key={key}>{label}{required&&' *'}{type==='status'?<select value={form[key]||'draft'} onChange={e=>update(key,e.target.value)}>{Object.entries(statusLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>:<input type={type} value={form[key]||''} required={required} maxLength={max} onChange={e=>update(key,e.target.value)}/>}</label>)}</fieldset>
+ return <><Modal title={(row.id?(canWrite?'編輯':'檢視'):'新增')+def.label} onClose={onClose} busy={busy||!!creating}><form onSubmit={submit}><fieldset disabled={busy||!canWrite||!!creating} className="form-grid">
+ {def.fields.map(([key,label,type,max,required])=>['contacts','organizations'].includes(type)?<RelationField key={key} kind={type} value={form[key]} onChange={v=>update(key,v)} officeId={officeId} disabled={busy||!canWrite} label={label} revision={relationRevision} onCreate={canWrite?name=>setCreating({key,table:type,row:{[definitions[type].name]:name}}):null}/>:<label key={key}>{label}{required&&' *'}{type==='caseType'?<select required value={form[key]} onChange={e=>update(key,e.target.value)}><option value="">請選擇案件類型</option>{form[key]&&!caseTypes.includes(form[key])&&<option value={form[key]}>{form[key]}（原案件類型）</option>}{caseTypes.map(v=><option key={v} value={v}>{v}</option>)}</select>:type==='status'?<select value={form[key]||'draft'} onChange={e=>update(key,e.target.value)}>{Object.entries(statusLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>:<input type={type} value={form[key]||''} required={required} maxLength={max} onChange={e=>update(key,e.target.value)}/>}</label>)}</fieldset>
  {table==='contacts'&&<p className="form-note">本階段只管理聯絡資訊，請勿在姓名、地址等欄位填入身分證字號。</p>}
- <Notice error>{error}</Notice><div className="form-actions"><button type="button" disabled={busy} onClick={onClose}>關閉</button>{canWrite&&<button className="primary" disabled={busy}>{busy?'儲存中…':'儲存'+def.label}</button>}</div></form></Modal>;
+ {quick&&<p className="form-note">儲存後會加入事務所名冊並自動選取。即使稍後取消案件，這筆名冊資料仍會保留。</p>}
+ {table==='office_cases'&&<p className="form-note">主要聯絡人是聯繫窗口，不等同買受人或出賣人。</p>}
+ <Notice>{message}</Notice><Notice error>{error}</Notice><div className="form-actions"><button type="button" disabled={busy||!!creating} onClick={onClose}>關閉</button>{canWrite&&<button className="primary" disabled={busy||!!creating}>{busy?'儲存中…':'儲存'+def.label}</button>}</div></form></Modal>{creating&&<RecordEditor table={creating.table} row={creating.row} officeId={officeId} canWrite={canWrite} quick onClose={()=>setCreating(null)} onSaved={saved=>{update(creating.key,saved.id);setMessage('已新增並選取「'+saved[definitions[creating.table].name]+'」，請繼續儲存'+def.label+'。');setRelationRevision(v=>v+1);setCreating(null);}}/>}</>;
 }
 function DeleteDialog({table,row,officeId,onClose,onDeleted}) {
  const [busy,setBusy]=useState(false),[error,setError]=useState('');const pending=useRef(false);
