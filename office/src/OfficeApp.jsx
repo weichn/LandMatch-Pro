@@ -1,3 +1,4 @@
+import {formatBirthDate} from './birthDate.js';
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 const TranscriptImport = lazy(() => import('./TranscriptImport'));
 const CaseTranscripts = lazy(() => import('./CaseTranscripts'));
@@ -163,7 +164,7 @@ export function RelationField({kind,value,onChange,officeId,disabled,label,onCre
  return <div className="relation"><label>搜尋{label}<input disabled={disabled} value={search} onChange={e=>{setSearch(e.target.value);setLoading(true);}} placeholder="輸入名稱縮小選項（最多顯示 50 筆）"/></label><label>{label}<select value={value||''} onChange={e=>{setSelectedError(false);onChange(e.target.value);}} disabled={disabled}><option value="">未指定</option>{value&&!items.some(o=>o.id===value)&&<option value={value}>{selectedError?'已選資料無法讀取（保留原選擇）':'已選資料（讀取中）'}</option>}{items.map(item=><option key={item.id} value={item.id}>{item[name]}</option>)}</select></label>{loading?<small role="status">讀取選項中…</small>:!error&&!options.length&&<small>{search.trim()?'沒有符合搜尋的資料。':'尚未建立'+definitions[kind].label+'，可直接在此新增。'}</small>}<Notice error>{error}</Notice>{(error||selectedError)&&<button type="button" disabled={disabled} onClick={()=>{setLoading(true);setRetry(v=>v+1);}}>重新讀取選項</button>}{onCreate&&!disabled&&<button type="button" onClick={()=>onCreate(search.trim())}>＋ 新增{definitions[kind].label}</button>}</div>;
 }
 export function RecordEditor({table,row,officeId,canWrite,onClose,onSaved,quick=false}) {
- const def=definitions[table];const [form,setForm]=useState({...row,status:row.status||'draft',case_type:row.case_type||''});
+ const def=definitions[table];const [form,setForm]=useState({...row,birth_date:formatBirthDate(row.birth_date),status:row.status||'draft',case_type:row.case_type||''});
  const [creating,setCreating]=useState(null),[relationRevision,setRelationRevision]=useState(0),[message,setMessage]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');const pending=useRef(false);
  const update=(key,value)=>setForm(f=>({...f,[key]:value}));
@@ -171,7 +172,7 @@ export function RecordEditor({table,row,officeId,canWrite,onClose,onSaved,quick=
   e.preventDefault();if(!canWrite||pending.current)return;pending.current=true;setBusy(true);setError('');
   try {
    if(table==='office_cases'&&form.closed_on&&(!form.opened_on||form.closed_on<form.opened_on)){setError('結案日期不得早於開案日期，且須填寫開案日期。');return;}
-   const values=payloadFor(table,form);
+   let values; try{values=payloadFor(table,form);}catch(e){setError(e.message);return;}
    const request=row.id?db.from(table).update(values).eq('id',row.id).eq('office_id',officeId).eq('updated_at',row.updated_at):db.from(table).insert({...values,office_id:officeId});
    const {data,error}=await request.select('id');
    if(error)setError(errorText(error));
@@ -181,7 +182,7 @@ export function RecordEditor({table,row,officeId,canWrite,onClose,onSaved,quick=
  }
  return <><Modal title={(row.id?(canWrite?'編輯':'檢視'):'新增')+def.label} onClose={onClose} busy={busy||!!creating}><form onSubmit={submit}><fieldset disabled={busy||!canWrite||!!creating} className="form-grid">
  {def.fields.map(([key,label,type,max,required])=>['contacts','organizations'].includes(type)?<RelationField key={key} kind={type} value={form[key]} onChange={v=>update(key,v)} officeId={officeId} disabled={busy||!canWrite} label={label} revision={relationRevision} onCreate={canWrite?name=>setCreating({key,table:type,row:{[definitions[type].name]:name}}):null}/>:<label key={key}>{label}{required&&' *'}{type==='caseType'?<select required value={form[key]} onChange={e=>update(key,e.target.value)}><option value="">請選擇案件類型</option>{form[key]&&!caseTypes.includes(form[key])&&<option value={form[key]}>{form[key]}（原案件類型）</option>}{caseTypes.map(v=><option key={v} value={v}>{v}</option>)}</select>:type==='status'?<select value={form[key]||'draft'} onChange={e=>update(key,e.target.value)}>{Object.entries(statusLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>:<input type={type} value={form[key]||''} required={required} maxLength={max} onChange={e=>update(key,e.target.value)}/>}</label>)}</fieldset>
- {table==='contacts'&&<p className="form-note">本階段只管理聯絡資訊，請勿在姓名、地址等欄位填入身分證字號。</p>}
+ {table==='contacts'&&<p className="form-note">出生年月日請填民國年／月／日，例如 80/05/21；未知可留白。身分證加密儲存尚未啟用，請勿將字號填入其他欄位。</p>}
  {quick&&<p className="form-note">儲存後會加入事務所名冊並自動選取。即使稍後取消案件，這筆名冊資料仍會保留。</p>}
  {table==='office_cases'&&<p className="form-note">主要聯絡人是聯繫窗口，不等同買受人或出賣人。</p>}
  <Notice>{message}</Notice><Notice error>{error}</Notice><div className="form-actions"><button type="button" disabled={busy||!!creating} onClick={onClose}>關閉</button>{canWrite&&<button className="primary" disabled={busy||!!creating}>{busy?'儲存中…':'儲存'+def.label}</button>}</div></form></Modal>{creating&&<RecordEditor table={creating.table} row={creating.row} officeId={officeId} canWrite={canWrite} quick onClose={()=>setCreating(null)} onSaved={saved=>{update(creating.key,saved.id);setMessage('已新增並選取「'+saved[definitions[creating.table].name]+'」，請繼續儲存'+def.label+'。');setRelationRevision(v=>v+1);setCreating(null);}}/>}</>;
