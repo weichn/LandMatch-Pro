@@ -106,7 +106,7 @@ export async function createRegistrationPdf(data,type,{loadAsset,reviewed=false}
  }else{
   box(p,m.receivingCity,220,269,105,48,{label:'受理縣市'});box(p,m.landOffice,350,269,69,36,{label:'地政事務所名稱'});dateParts(m.causeDate).forEach((d,i)=>box(p,d,[1055,1130,1195][i],282,i===0?53:40,36));
   const mortgage=m.reason==='抵押權設定';tick(p,120,mortgage?430:404);tick(p,mortgage?502:502,mortgage?430:403);tick(p,422,564);
-  str(m.attachments).split('\n').slice(0,9).forEach((v,i)=>{const col=Math.floor(i/3),row=i%3,count=v.match(/^(.*?)\s*(\d+)\s*[份件]\s*$/);box(p,count?count[1]:v,205+col*370,588+row*26.5,260,26.5,{size:13,align:'left',label:'附繳證件'});if(count)box(p,count[2],475+col*370,588+row*26.5,40,26.5,{size:13,label:'證件份數'});});
+  str(m.attachments).split('\n').slice(0,9).forEach((v,i)=>{const col=Math.floor(i/3),row=i%3,count=v.match(/^(.*?)\s*(\d+)\s*[份件]\s*$/);box(p,count?count[1]:v,205+col*370,588+row*26.5,220,26.5,{size:13,align:'left',label:'附繳證件'});if(count)box(p,count[2],430+col*370,588+row*26.5,35,26.5,{size:13,label:'證件份數'});});
   if(str(m.attachments).split('\n').length>9)throw new Error('附繳證件超過 9 項，請另附續頁。');
   box(p,m.agentName,505,668,70,28,{label:'代理人姓名'});box(p,m.notes,180,777,747,154,{align:'left',label:'備註'});
   box(p,parties.find(a=>a.role===(mortgage?'creditor':'buyer'))?.phone,1134,668,160,36,{size:12});box(p,parties.find(a=>a.role===(mortgage?'mortgagor':'seller'))?.phone,1134,704,160,35,{size:12});box(p,m.agentPhone||data.office.phone,1134,740,160,35,{size:12});
