@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 const TranscriptImport = lazy(() => import('./TranscriptImport'));
 const CaseTranscripts = lazy(() => import('./CaseTranscripts'));
 const SaleParties = lazy(() => import('./SaleParties'));
+const CaseDocuments = lazy(() => import('./CaseDocuments'));
 import { db } from './client';
 import { definitions, statusLabels, roleLabels, caseTypes, payloadFor, errorText } from './model';
 
@@ -106,6 +107,7 @@ function Records({table,membership}) {
  const [rows,setRows]=useState([]),[total,setTotal]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState('');
  const [search,setSearch]=useState(''),[query,setQuery]=useState(''),[page,setPage]=useState(0),[revision,setRevision]=useState(0);
  const [transcriptCase,setTranscriptCase]=useState(null),[partyCase,setPartyCase]=useState(null);
+ const [documentCase,setDocumentCase]=useState(null),[documentDirty,setDocumentDirty]=useState(false),[confirmDocumentClose,setConfirmDocumentClose]=useState(false);
  const [editor,setEditor]=useState(null),[deleting,setDeleting]=useState(null),[message,setMessage]=useState('');
  useEffect(()=>{const timer=setTimeout(()=>{setQuery(search.trim());setPage(0);},250);return()=>clearTimeout(timer);},[search]);
  useEffect(()=>{
@@ -122,22 +124,24 @@ function Records({table,membership}) {
   return ()=>controller.abort();
  },[table,def.columns,def.name,officeId,page,query,revision]);
  function refresh(text){setMessage(text);setLoading(true);setRevision(v=>v+1);}
+ function closeDocuments(){if(documentDirty){setConfirmDocumentClose(true);return;}setDocumentCase(null);}
  return <><div className="page-heading"><div><div className="eyebrow">OFFICE / {table==='office_cases'?'CASES':table==='contacts'?'CONTACTS':'ORGANIZATIONS'}</div><h1>{def.label}管理</h1><p>{table==='office_cases'?'每件委託的進度，都在這裡。':table==='contacts'?'建立聯絡資料，讓每一次聯繫都有依據。':'集中管理銀行、仲介與合作單位。'}</p></div>{canWrite&&<button className="primary" onClick={()=>setEditor({})}>＋ 新增{def.label}</button>}</div>
  <div className="list-toolbar"><label className="search"><span className="sr-only">搜尋{def.label}名稱</span><input value={search} onChange={e=>{setSearch(e.target.value);setLoading(e.target.value.trim()!==query);}} placeholder={'搜尋'+def.label+'名稱…'} maxLength={100}/></label><span>{loading?'讀取中…':total+' 筆資料'}</span><button className="quiet" onClick={()=>refresh('')}>重新整理</button></div>
  <Notice error>{error}</Notice><Notice>{message}</Notice>
  {loading?<div className="empty" role="status">讀取資料中…</div>:!rows.length?<div className="empty"><span className="empty-symbol">{table==='office_cases'?'▤':'◎'}</span><h2>{query?'沒有符合的結果':'尚未建立'+def.label}</h2><p>{query?'試試其他名稱。':canWrite?'從新增第一筆資料開始，逐步整理你的事務所。':'目前沒有可檢視的資料。'}</p>{canWrite&&!query&&<button onClick={()=>setEditor({})}>新增{def.label}</button>}</div>:
- <div className="table-wrap"><table><thead><tr>{table==='office_cases'&&<th>案號</th>}<th>{def.label}名稱</th><th>{table==='office_cases'?'進度':'電話'}</th><th>{table==='office_cases'?'類型':'Email'}</th><th>更新日期</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>{rows.map(row=><tr key={row.id}>{table==='office_cases'&&<td className="case-number">{row.case_number}</td>}<td><button className="record-name" onClick={()=>setEditor(row)}>{row[def.name]}</button></td><td>{table==='office_cases'?<span className={'status '+row.status}>{statusLabels[row.status]}</span>:row.phone||'—'}</td><td>{table==='office_cases'?row.case_type:row.email||'—'}</td><td>{new Date(row.updated_at).toLocaleDateString('zh-TW')}</td><td>{table==='office_cases'&&<><button className="text-button" onClick={()=>setTranscriptCase(row)}>地籍資料</button><button className="text-button" onClick={()=>setPartyCase(row)}>買賣當事人</button></>}{canDelete&&<button className="text-button danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>}</td></tr>)}</tbody></table></div>}
+ <div className="table-wrap"><table><thead><tr>{table==='office_cases'&&<th>案號</th>}<th>{def.label}名稱</th><th>{table==='office_cases'?'進度':'電話'}</th><th>{table==='office_cases'?'類型':'Email'}</th><th>更新日期</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>{rows.map(row=><tr key={row.id}>{table==='office_cases'&&<td className="case-number">{row.case_number}</td>}<td><button className="record-name" onClick={()=>setEditor(row)}>{row[def.name]}</button></td><td>{table==='office_cases'?<span className={'status '+row.status}>{statusLabels[row.status]}</span>:row.phone||'—'}</td><td>{table==='office_cases'?row.case_type:row.email||'—'}</td><td>{new Date(row.updated_at).toLocaleDateString('zh-TW')}</td><td>{table==='office_cases'&&<><button className="text-button" onClick={()=>setTranscriptCase(row)}>地籍資料</button><button className="text-button" onClick={()=>setPartyCase(row)}>買賣當事人</button><button className="text-button" onClick={()=>{setDocumentCase(row);setDocumentDirty(false);setConfirmDocumentClose(false);}}>官方書表</button></>}{canDelete&&<button className="text-button danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>}</td></tr>)}</tbody></table></div>}
  <div className="pagination"><button disabled={page===0||loading} onClick={()=>{setLoading(true);setPage(p=>p-1);}}>上一頁</button><span>第 {page+1} 頁</span><button disabled={(page+1)*20>=total||loading} onClick={()=>{setLoading(true);setPage(p=>p+1);}}>下一頁</button></div>
  {editor&&<RecordEditor table={table} row={editor} officeId={officeId} canWrite={canWrite} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);refresh('資料已儲存。');}}/>}
  {transcriptCase&&<Modal title={transcriptCase.case_number+"｜案件地籍資料"} onClose={()=>setTranscriptCase(null)}><Suspense fallback={<p>載入案件資料…</p>}><CaseTranscripts officeId={officeId} caseId={transcriptCase.id}/></Suspense></Modal>}
  {partyCase&&<Modal title={partyCase.case_number+"｜買賣當事人"} onClose={()=>setPartyCase(null)}><Suspense fallback={<p>載入買賣當事人…</p>}><SaleParties officeId={officeId} caseId={partyCase.id} canWrite={canWrite}/></Suspense></Modal>}
+ {documentCase&&<Modal className="document-modal" title={documentCase.case_number+'｜官方書表'} onClose={closeDocuments}>{confirmDocumentClose&&<div className="notice" role="alert"><p>關閉後，本次補填內容將清除。請先下載 PDF 保存。</p><div className="form-actions"><button onClick={()=>setConfirmDocumentClose(false)}>繼續編輯</button><button onClick={()=>{setDocumentCase(null);setDocumentDirty(false);setConfirmDocumentClose(false);}}>關閉並清除本次補填</button></div></div>}<Suspense fallback={<p>載入官方書表…</p>}><CaseDocuments officeId={officeId} caseRow={documentCase} office={membership.offices} onDirtyChange={setDocumentDirty}/></Suspense></Modal>}
  {deleting&&<DeleteDialog table={table} row={deleting} officeId={officeId} onClose={()=>setDeleting(null)} onDeleted={()=>{setDeleting(null);refresh('資料已刪除。');}}/>}
  </>;
 }
-function Modal({title,children,onClose,busy=false}) {
+function Modal({title,children,onClose,busy=false,className=''}) {
  const ref=useRef(null),titleId=useId();
  useEffect(()=>{const el=ref.current;el.showModal();return()=>el.close();},[]);
- return <dialog ref={ref} className="modal" aria-labelledby={titleId} onCancel={e=>{e.preventDefault();if(!busy)onClose();}}><div className="modal-header"><h2 id={titleId}>{title}</h2><button aria-label="關閉" disabled={busy} onClick={onClose}>✕</button></div>{children}</dialog>;
+ return <dialog ref={ref} className={'modal '+className} aria-labelledby={titleId} onCancel={e=>{e.preventDefault();if(!busy)onClose();}}><div className="modal-header"><h2 id={titleId}>{title}</h2><button aria-label="關閉" disabled={busy} onClick={onClose}>✕</button></div>{children}</dialog>;
 }
 export function RelationField({kind,value,onChange,officeId,disabled,label,onCreate,revision=0}) {
  const [search,setSearch]=useState(''),[options,setOptions]=useState([]),[error,setError]=useState(''),[selected,setSelected]=useState(null);
