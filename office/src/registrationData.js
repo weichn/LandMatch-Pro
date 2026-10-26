@@ -1,4 +1,5 @@
 import {formatBirthDate} from './birthDate.js';
+import {districtCities} from './districtCities.js';
 
 const text = value => typeof value === 'string' ? value.trim() : '';
 const blankValues = new Set(['', '(空白)', '（空白）', '空白', '(未登記)', '（未登記）', '未登記', '-', '—', '－']);
@@ -21,6 +22,20 @@ function splitSection(value) {
  return split ? {section:split[1], subsection:split[2]} : {section:value, subsection:''};
 }
 
+const counties=[...new Set(Object.values(districtCities).flat())];
+const countyName=value=>text(value).replace(/台/g,'臺');
+function propertyLocation(fields){
+ let district=countyName(fields.district);
+ const prefix=counties.find(city=>district.startsWith(city));
+ if(prefix)district=district.slice(prefix.length);
+ const candidates=districtCities[district]||[];
+ const explicit=countyName(fields.city);
+ const address=countyName(fields.address);
+ const addressCity=counties.find(city=>address.startsWith(city)&&(!candidates.length||candidates.includes(city)));
+ const city=explicit||prefix||addressCity||(candidates.length===1?candidates[0]:'');
+ return {city,district};
+}
+
 function propertyFromSource(row, key) {
  const fields = reviewedFields(row);
  const sectionParts=splitSection(fields.section || '');
@@ -28,13 +43,15 @@ function propertyFromSource(row, key) {
  const rawLand=fields.land||'';
  const land=sectionPrefix&&rawLand.startsWith(sectionPrefix)?rawLand.slice(sectionPrefix.length):rawLand;
  const commons = (Array.isArray(row.common) ? row.common : []).map(reviewedFields);
- const originalShares = [...new Set((Array.isArray(row.owners) ? row.owners : []).map(reviewedFields).map(owner=>owner.share).filter(Boolean))];
+ const owners=Array.isArray(row.owners)?row.owners:[];
+ const ownerShares=owners.map(reviewedFields).map(owner=>({name:owner.name||'',sequence:owner.sequence||'',share:owner.share||''})).filter(owner=>owner.share);
+ const originalShares=[...new Set(ownerShares.map(owner=>owner.share))];
  return {
-  key, kind:row.kind, city:'', district:fields.district || '', ...splitSection(fields.section || ''),
+  key, kind:row.kind, ...propertyLocation(fields), ...splitSection(fields.section || ''),
   number:fields.number || '', area:fields.area || '', address:fields.address || '', land,
   use:fields.use || '', material:fields.material || '', floors:fields.floors || '', floor:fields.floor || '',
   floorArea:fields.floorArea || '', annex:fields.annex || '', annexArea:fields.annexArea || '',
-  share:'', price:'', limitedAmount:'', foreclosure:'', originalShare:originalShares.join('；'),
+  share:owners.length===1?ownerShares[0]?.share||'':'', price:'', limitedAmount:'', foreclosure:'', originalShare:originalShares.join('；'),ownerShares,ownerCount:owners.length,
   commonNumber:commons.map(common=>common.number || '').join('\n'),
   commonArea:commons.map(common=>common.area || '').join('\n'),
   commonShare:commons.map(common=>common.share || '').join('\n')
@@ -51,7 +68,7 @@ function birthDate(value) {
  return year > 0 && month >= 1 && month <= 12 && day >= 1 && day <= days[month-1] ? formatBirthDate(iso) : '';
 }
 
-/** Prepare a document-only copy. This never modifies source records or infers transaction terms. */
+/** Prepare a document-only copy; prefill reviewed title shares, leaving them editable for this transaction. */
 export function initialRegistrationData({caseRow, office, parties = [], transcripts = []} = {}) {
  const sourceWarnings = [];
  const properties = [];
@@ -70,7 +87,7 @@ export function initialRegistrationData({caseRow, office, parties = [], transcri
    }
    const mapped = propertyFromSource(source, `transcript-${snapshotIndex}-${index}`);
    const completeIdentity = mapped.district && mapped.section && mapped.number;
-   const identity = [mapped.kind,mapped.district,mapped.section,mapped.subsection,mapped.number].join('|');
+   const identity = [mapped.kind,mapped.city,mapped.district,mapped.section,mapped.subsection,mapped.number].join('|');
    if (completeIdentity && knownProperties.has(identity)) {
     const previous = knownProperties.get(identity);
     const comparable = value => JSON.stringify({...value,key:undefined});
