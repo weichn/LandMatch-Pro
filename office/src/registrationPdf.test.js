@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {PDFDocument} from 'pdf-lib';
 import {createRegistrationPdf,missingFields,splitAddress,validRocDate} from './registrationPdf.js';
+import {applyPrintLayout} from './printLayout.js';
 
 function fixture() {
  const property={included:true,city:'新北市',district:'五股區',section:'測試段',subsection:'',number:'0001-0000',area:'100.00',share:'1分之1',address:'新北市五股區測試路一段2巷3弄4號五樓',land:'0001-0000',floor:'五層',floorArea:'50.00',annex:'陽台',annexArea:'5.00',limitedAmount:'',foreclosure:'',kind:'土地'};
@@ -120,4 +121,35 @@ test('invalid operative dates and overflowing text fail PDF generation',async()=
  await assert.rejects(createRegistrationPdf(badCause,'application',{loadAsset}),/日期請填有效的民國/);
  const overflow=fixture();overflow.parties[0].name='範例姓名'.repeat(100);
  await assert.rejects(createRegistrationPdf(overflow,'sale',{loadAsset}),/內容超出版面/);
+});
+
+test('gift and inheritance use their own official templates and explicit roles, with A3 portrait output',async()=>{
+ for(const type of ['gift','inheritance-tree','inheritance-partition']){
+  const data=fixture();
+  data.meta.giftValue='新臺幣壹佰萬元整';data.meta.deathDate='115/01/01';
+  data.properties.forEach(p=>p.allocation='測試繼承人 全部1分之1');
+  data.parties=type==='gift'?data.parties.slice(0,2).map((p,i)=>({...p,role:i?'donor':'donee'})):[{role:'decedent',name:'測試被繼承人'},{...data.parties[0],role:'heir',name:'測試繼承人',relationship:'長子'}];
+  assert.deepEqual(missingFields(data,type),[],type);
+  const result=await createRegistrationPdf(data,type,{loadAsset,reviewed:true});
+  assert.equal(result.draft,false,type);
+  const original=await PDFDocument.load(result.bytes);
+  assert.equal(original.getPageCount(),type==='gift'?2:1,type);
+  const output=await PDFDocument.load(await applyPrintLayout(result.bytes,'a3'));
+  assert.equal(output.getPageCount(),1,type);
+  assert.ok(Math.abs(output.getPage(0).getWidth()-841.89)<.02);
+  assert.ok(Math.abs(output.getPage(0).getHeight()-1190.55)<.02);
+ }
+});
+
+test('sale roles never become donors or heirs, and inheritance allocations are not invented',()=>{
+ const data=fixture();
+ assert.ok(missingFields(data,'gift').includes('受贈人'));
+ assert.ok(missingFields(data,'gift').includes('贈與人'));
+ assert.ok(missingFields(data,'inheritance-tree').includes('繼承人'));
+ assert.ok(missingFields(data,'inheritance-tree').includes('被繼承人'));
+ assert.ok(missingFields(data,'inheritance-partition').some(s=>s.includes('遺產權利人及繼承持分')));
+ data.meta.reason='贈與';
+ assert.ok(missingFields(data,'application').includes('受贈人'));
+ data.meta.reason='繼承';
+ assert.ok(missingFields(data,'application').includes('繼承人'));
 });
