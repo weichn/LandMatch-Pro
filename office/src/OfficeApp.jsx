@@ -5,6 +5,7 @@ const CaseTranscripts = lazy(() => import('./CaseTranscripts'));
 const SaleParties = lazy(() => import('./SaleParties'));
 const CaseDocuments = lazy(() => import('./CaseDocuments'));
 import { db } from './client';
+import { beginOfficeConnection, OfficeConnectError } from './officeConnect';
 import { definitions, statusLabels, roleLabels, caseTypes, payloadFor, errorText } from './model';
 
 const marketplace = 'https://land-match-pro.vercel.app/';
@@ -16,45 +17,46 @@ function Brand() { return <a className="brand" href="/"><span className="brand-m
 export default function OfficeApp() {
  const [auth, setAuth] = useState({ ready:false, session:null, error:'' });
  useEffect(() => {
-  let active=true;
+  let active=true,seen=false;
   const { data:{ subscription } }=db.auth.onAuthStateChange((_event,session)=>{
+   seen=true;
    if(active) setAuth({ready:true,session,error:''});
   });
   db.auth.getSession().then(({data,error})=>{
-   if(active) setAuth({ready:true,session:data.session,error:error ? '無法確認登入狀態，請重新整理。' : ''});
-  }).catch(()=>{if(active)setAuth({ready:true,session:null,error:'無法確認登入狀態，請重新整理。'});});
+   if(active&&!seen) setAuth({ready:true,session:data.session,error:error ? '無法確認登入狀態，請重新整理。' : ''});
+  }).catch(()=>{if(active&&!seen)setAuth({ready:true,session:null,error:'無法確認登入狀態，請重新整理。'});});
   return ()=>{active=false;subscription.unsubscribe();};
  },[]);
  return <div className="office-app"><header className="topbar"><Brand/><a className="back-link" href={marketplace}>返回媒合平台 ↗</a></header>
  {!auth.ready ? <main className="loading" role="status">正在確認登入狀態…</main> : auth.error ? <main><Notice error>{auth.error}</Notice></main> : auth.session ? <Workspace key={auth.session.user.id} user={auth.session.user}/> : <AuthScreen/>}
  <footer className="site-footer">LandMatch Pro Office <span>讓案件有條理，讓辦案更專注。</span></footer></div>;
 }
-function AuthScreen() {
- const [mode,setMode]=useState('login');
- const [message,setMessage]=useState('');
+export function AuthScreen() {
+ const [legacy,setLegacy]=useState(false);
  const [error,setError]=useState('');
  const [busy,setBusy]=useState(false);
  const pending=useRef(false);
  async function submit(event) {
   event.preventDefault();if(pending.current)return;
-  pending.current=true;setBusy(true);setMessage('');setError('');
+  pending.current=true;setBusy(true);setError('');
   const form=new FormData(event.currentTarget);
   try {
    const credentials={email:String(form.get('email')).trim(),password:String(form.get('password'))};
-   const result=mode==='signup' ? await db.auth.signUp(credentials) : await db.auth.signInWithPassword(credentials);
-   if(result.error) {
-    setError(mode==='login' ? '登入未完成，請確認 Email、密碼及信箱驗證狀態。' : '註冊未完成，請確認密碼長度或稍後重試。');
-   } else if(mode==='signup' && !result.data.session) {
-    setMessage('請至信箱完成驗證，再回到此工作台登入。若已有帳號，請直接登入。');
-   }
+   const result=await db.auth.signInWithPassword(credentials);
+   if(result.error) setError('登入未完成，請確認既有工作台帳號、密碼及信箱驗證狀態。');
   } catch {setError('連線失敗，請稍後重試。');}
   finally{pending.current=false;setBusy(false);}
  }
+ async function professionalLogin(){
+  if(pending.current)return;pending.current=true;setBusy(true);setError('');
+  try{await beginOfficeConnection();}
+  catch(failure){setError(failure instanceof OfficeConnectError?failure.message:'目前無法連接工作台，請稍後重試。');pending.current=false;setBusy(false);}
+ }
  return <main className="welcome"><section className="welcome-copy"><div className="eyebrow">YOUR OFFICE, IN ORDER</div><h1>每一件委託，<br/>都有清楚的下一步。</h1><p>把案件、聯絡人與往來組織，<br/>整理在事務所專屬的工作空間。</p><div className="feature-row"><span>01<br/><strong>案件進度</strong></span><span>02<br/><strong>聯絡人管理</strong></span><span>03<br/><strong>組織資料</strong></span></div><div className="welcome-note">專屬事務所空間 · 依成員權限存取</div></section>
- <section className="auth-card"><div className="eyebrow">LANDMATCH OFFICE</div><h2>{mode==='login'?'登入工作台':'建立 Office 帳號'}</h2><p>Office 使用獨立登入，請使用工作台帳號。</p>
- <form onSubmit={submit}><label>Email<input type="email" name="email" required autoComplete="email" maxLength={254}/></label><label>密碼<input type="password" name="password" required minLength={mode==='signup'?12:1} autoComplete={mode==='signup'?'new-password':'current-password'}/></label>{mode==='signup'&&<small>請使用至少 12 個字元的密碼；若收到驗證信，請依信件指示完成驗證。</small>}
- <Notice error>{error}</Notice><Notice>{message}</Notice><button className="primary wide" disabled={busy}>{busy?'處理中…':mode==='login'?'登入工作台 →':'註冊帳號'}</button></form>
- <button className="text-button" disabled={busy} onClick={()=>{setMode(mode==='login'?'signup':'login');setError('');setMessage('');}}>{mode==='login'?'第一次使用？建立 Office 帳號':'已有帳號？返回登入'}</button></section></main>;
+ <section className="auth-card"><div className="eyebrow">LANDMATCH OFFICE</div><h2>登入工作台</h2><p>使用已驗證的地政士帳號即可進入，第一次會自動開通事務所工作空間，不用另外註冊。地政士資格申請中也可使用工作台。</p>
+ <Notice error>{error}</Notice>
+ {!legacy?<><button className="primary wide" type="button" disabled={busy} onClick={professionalLogin}>{busy?'正在前往地政士登入…':'使用地政士帳號登入 →'}</button><p className="office-connect-signup">還沒有地政士帳號？<a href={marketplace}>前往媒合平台免費註冊</a></p></>:<form onSubmit={submit}><p>此處供原本已建立的工作台帳號登入；原事務所與案件資料會保留。</p><label>Email<input type="email" name="email" required autoComplete="email" maxLength={254}/></label><label>密碼<input type="password" name="password" required autoComplete="current-password"/></label><button className="primary wide" disabled={busy}>{busy?'處理中…':'登入既有工作台'}</button></form>}
+ <button className="text-button" type="button" disabled={busy} onClick={()=>{setLegacy(v=>!v);setError('');}}>{legacy?'改用地政士帳號登入':'既有工作台帳號登入'}</button></section></main>;
 }
 function Workspace({user}) {
  const [memberships,setMemberships]=useState(null);

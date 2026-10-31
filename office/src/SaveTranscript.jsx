@@ -1,18 +1,25 @@
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {db} from './client';
 import {toStoragePayload} from './transcriptDraft';
 import CaseTranscripts from './CaseTranscripts';
 
 export default function SaveTranscript({result}){
  const [session,setSession]=useState(undefined),[members,setMembers]=useState([]),[officeId,setOfficeId]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[retry,setRetry]=useState(0);
+ const [legacyLogin,setLegacyLogin]=useState(false);
  const pending=useRef(false);
+ const mounted=useRef(false),sessionReadRevision=useRef(0),sessionUserId=useRef(undefined);
+ const adoptSession=useCallback(next=>{
+  const nextId=next?.user.id||null;
+  if(sessionUserId.current!==nextId){setMembers([]);setOfficeId('');setLoaded(false);sessionUserId.current=nextId;}
+  setSession(next);
+ },[]);
  const validation=useMemo(()=>{try{return {payload:toStoragePayload(result),error:''};}catch(e){return {payload:null,error:e.message};}},[result]);
  useEffect(()=>{
-  let active=true,seen=false;
-  const {data:{subscription}}=db.auth.onAuthStateChange((_e,s)=>{seen=true;if(active)setSession(s);});
-  db.auth.getSession().then(({data,error})=>{if(active&&!seen){setSession(data.session);if(error)setError('登入狀態讀取失敗，請重新登入。');}}).catch(()=>{if(active){setSession(null);setError('登入狀態讀取失敗。');}});
-  return()=>{active=false;subscription.unsubscribe();};
- },[]);
+  let active=true,seen=false;mounted.current=true;
+  const {data:{subscription}}=db.auth.onAuthStateChange((_e,s)=>{seen=true;sessionReadRevision.current++;if(active)adoptSession(s);});
+  db.auth.getSession().then(({data,error})=>{if(active&&!seen){adoptSession(data.session);if(error)setError('登入狀態讀取失敗，請重新登入。');}}).catch(()=>{if(active&&!seen){adoptSession(null);setError('登入狀態讀取失敗。');}});
+  return()=>{active=false;mounted.current=false;subscription.unsubscribe();};
+ },[adoptSession]);
  useEffect(()=>{
   if(!session?.user.id)return;
   const abort=new AbortController();
@@ -22,14 +29,21 @@ export default function SaveTranscript({result}){
   return()=>abort.abort();
  },[session?.user.id,retry]);
  async function login(e){e.preventDefault();if(pending.current)return;pending.current=true;setBusy(true);setError('');const form=e.currentTarget;const f=new FormData(form);
-  try{const {error}=await db.auth.signInWithPassword({email:String(f.get('email')).trim(),password:String(f.get('password'))});if(error)setError('登入失敗，請確認 Office 帳號與密碼。');else form.reset();}catch{setError('登入連線失敗，請重試。');}finally{pending.current=false;setBusy(false);}
+  try{const {error}=await db.auth.signInWithPassword({email:String(f.get('email')).trim(),password:String(f.get('password'))});if(mounted.current){if(error)setError('登入失敗，請確認既有工作台帳號與密碼。');else form.reset();}}catch{if(mounted.current)setError('登入連線失敗，請重試。');}finally{pending.current=false;if(mounted.current)setBusy(false);}
+ }
+ async function checkSession(){
+  if(pending.current)return;pending.current=true;setBusy(true);setError('');
+  const revision=++sessionReadRevision.current;
+  try{const {data,error}=await db.auth.getSession();if(mounted.current&&revision===sessionReadRevision.current){if(error)setError('登入狀態讀取失敗，請重試。');else{adoptSession(data.session);setRetry(v=>v+1);if(!data.session)setError('尚未偵測到工作台登入，請完成新分頁登入後再按一次。');}}}
+  catch{if(mounted.current&&revision===sessionReadRevision.current)setError('登入狀態讀取失敗，請重試。');}
+  finally{pending.current=false;if(mounted.current)setBusy(false);}
  }
  const member=members.find(m=>m.office_id===officeId);
  return <section className="save-transcript"><h2>存入正式案件</h2><p>只在妳按下「確認存入」時，才會將下方核對資料傳送至所選事務所。原始 PDF 不上傳。</p>
  {error&&<p className="notice error" role="alert">{error}</p>}
- {session===undefined?<p role="status">確認登入狀態…</p>:!session?<form className="form-grid" onSubmit={login}><p>請登入 Office，核對資料會留在這個頁面。</p><label>Email<input name="email" type="email" required autoComplete="email"/></label><label>密碼<input name="password" type="password" required autoComplete="current-password"/></label><button className="primary" disabled={busy}>{busy?'登入中…':'登入並選擇案件'}</button></form>:<>
+ {session===undefined?<p role="status">確認登入狀態…</p>:!session?<div><p>使用地政士帳號登入即可自動開通工作台，不用另外註冊。登入會在新分頁完成，這裡的核對資料會保留。</p><div className="office-connect-actions"><a className="primary" href="/?connect=marketplace" target="_blank" rel="noopener noreferrer">使用地政士帳號登入 ↗</a><button type="button" onClick={checkSession} disabled={busy}>{busy?'確認中…':'已完成登入，重新確認'}</button></div><button type="button" className="text-button" onClick={()=>setLegacyLogin(v=>!v)} disabled={busy}>{legacyLogin?'收起既有帳號登入':'既有工作台帳號登入'}</button>{legacyLogin&&<form className="form-grid" onSubmit={login}><label>Email<input name="email" type="email" required autoComplete="email"/></label><label>密碼<input name="password" type="password" required autoComplete="current-password"/></label><button className="primary" disabled={busy}>{busy?'登入中…':'登入既有工作台並選擇案件'}</button></form>}</div>:<>
  <p>已登入：{session.user.email}</p><button type="button" onClick={()=>setRetry(v=>v+1)}>重新讀取事務所</button>
- {!loaded?<p role="status">讀取事務所…</p>:!members.length?<p>目前沒有事務所成員資格。請先<a href="/">到工作台建立事務所</a>，再回此頁讀入已下載的草稿。</p>:<><label>儲存到哪間事務所<select value={officeId} onChange={e=>setOfficeId(e.target.value)}>{members.map(m=><option key={m.office_id} value={m.office_id}>{m.offices?.name||'事務所'}</option>)}</select></label>
+ {!loaded?<p role="status">讀取事務所…</p>:!members.length?<p>目前沒有可用的事務所成員資格。可<a href="/?connect=marketplace" target="_blank" rel="noopener noreferrer">另開工作台確認地政士帳號</a>，完成後回此頁重新讀取；核對資料會保留。</p>:<><label>儲存到哪間事務所<select value={officeId} onChange={e=>setOfficeId(e.target.value)}>{members.map(m=><option key={m.office_id} value={m.office_id}>{m.offices?.name||'事務所'}</option>)}</select></label>
  {validation.error?<p role="status">{validation.error}</p>:member&&['owner','admin','staff'].includes(member.role)?<SaveTarget key={session.user.id+officeId+JSON.stringify(validation.payload)} officeId={officeId} officeName={member.offices?.name} payload={validation.payload}/>:<p>目前是唯讀權限，無法存入案件。</p>}</>}
  </>}
  </section>;

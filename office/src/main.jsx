@@ -1,8 +1,16 @@
-import { StrictMode, lazy, Suspense } from 'react';
-const TranscriptImport = lazy(() => import('./TranscriptImport'));
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import OfficeApp from './OfficeApp';
+import OfficeEntryApplication from './OfficeEntryApplication';
+import OfficeConnectionProblem from './OfficeConnectionProblem';
+import { db } from './client';
+import { createOfficeEntryRunner } from './officeConnect';
 import './office.css';
-createRoot(document.getElementById('root')).render(<StrictMode>{new URLSearchParams(window.location.search).has('import') ? <Suspense fallback={<p>載入謄本匯入…</p>}><TranscriptImport/></Suspense> : <OfficeApp/>}</StrictMode>);
+const root=createRoot(document.getElementById('root'));
+root.render(<main className="loading" role="status">正在確認工作台登入…</main>);
+const runEntry=createOfficeEntryRunner({auth:db.auth,fetchImpl:window.fetch.bind(window)});
+runEntry().then(entry=>{
+ if(entry.mode==='redirecting')return;
+ root.render(<StrictMode><OfficeEntryApplication returnTo={entry.returnTo}/></StrictMode>);
+}).catch(error=>root.render(<StrictMode><OfficeConnectionProblem error={error}/></StrictMode>));
 
 
