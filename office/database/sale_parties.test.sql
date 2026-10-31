@@ -1,0 +1,54 @@
+begin;
+create temporary table f(key text primary key,id uuid default gen_random_uuid());
+insert into f(key) values('a'),('b'),('staff'),('viewer'),('outsider'),('suspended'),('oa'),('ob'),('ca'),('cb'),('request'),('newrequest');
+grant select on f to authenticated,anon;
+create function pg_temp.uid(k text) returns uuid language sql as $$select id from pg_temp.f where key=k$$;
+create temporary table fixture(payload jsonb);
+insert into fixture values('{"version":1,"pageCount":1,"properties":[{"kind":"土地","fields":[{"key":"district","value":"測試區","page":1,"reviewed":true},{"key":"section","value":"測試段","page":1,"reviewed":true},{"key":"number","value":"0001-0000","page":1,"reviewed":true},{"key":"area","value":"100.00","page":1,"reviewed":true}],"owners":[{"fields":[{"key":"name","value":"測**","page":1,"reviewed":true}]}],"common":[],"rights":[]}]}');
+grant select on fixture to authenticated,anon;
+create function pg_temp.payload() returns jsonb language sql as $$select payload from pg_temp.fixture$$;
+create temporary table results(label text,passed boolean,actual text);
+grant insert,select on results to authenticated,anon;
+create function pg_temp.verify(label text,q text,expected text) returns void language plpgsql security invoker as $$
+declare actual text;
+begin begin execute q into actual; exception when others then actual:=SQLSTATE; end;
+insert into pg_temp.results values(label,actual is not distinct from expected,actual);end$$;
+insert into auth.users(id,aud,role,email,email_confirmed_at,is_anonymous)
+ select id,'authenticated','authenticated',id::text||'@example.invalid',now(),false from f where key in('a','b','staff','viewer','outsider','suspended');
+insert into public.offices(id,name) values(pg_temp.uid('oa'),'TRANSCRIPT TEST A'),(pg_temp.uid('ob'),'TRANSCRIPT TEST B');
+insert into public.office_members(office_id,user_id,role,status) values
+ (pg_temp.uid('oa'),pg_temp.uid('a'),'owner','active'),(pg_temp.uid('ob'),pg_temp.uid('b'),'owner','active'),
+ (pg_temp.uid('oa'),pg_temp.uid('staff'),'staff','active'),(pg_temp.uid('oa'),pg_temp.uid('viewer'),'viewer','active'),(pg_temp.uid('oa'),pg_temp.uid('suspended'),'staff','suspended');
+insert into public.office_cases(id,office_id,case_number,title) values(pg_temp.uid('ca'),pg_temp.uid('oa'),'TEST-A','Test A'),(pg_temp.uid('cb'),pg_temp.uid('ob'),'TEST-B','Test B');
+insert into public.contacts(id,office_id,display_name) values(pg_temp.uid('request'),pg_temp.uid('oa'),'TEST A'),(pg_temp.uid('newrequest'),pg_temp.uid('ob'),'TEST B');
+set local role anon;
+select pg_temp.verify('anon denied',$q$select count(*)::text from public.office_case_parties$q$,'42501');
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims',jsonb_build_object('sub',pg_temp.uid('a'),'role','authenticated')::text,true);
+select pg_temp.verify('owner insert',$q$with r as(insert into public.office_case_parties(office_id,case_id,contact_id,role) values(pg_temp.uid('oa'),pg_temp.uid('ca'),pg_temp.uid('request'),'buyer') returning id) select count(*)::text from r$q$,'1');
+select pg_temp.verify('duplicate rejected',$q$insert into public.office_case_parties(office_id,case_id,contact_id,role) values(pg_temp.uid('oa'),pg_temp.uid('ca'),pg_temp.uid('request'),'buyer')$q$,'23505');
+select pg_temp.verify('invalid role rejected',$q$insert into public.office_case_parties(office_id,case_id,contact_id,role) values(pg_temp.uid('oa'),pg_temp.uid('ca'),pg_temp.uid('request'),'hacker')$q$,'23514');
+select pg_temp.verify('cross tenant contact rejected',$q$insert into public.office_case_parties(office_id,case_id,contact_id,role) values(pg_temp.uid('oa'),pg_temp.uid('ca'),pg_temp.uid('newrequest'),'seller')$q$,'23503');
+select pg_temp.verify('cross tenant case rejected',$q$insert into public.office_case_parties(office_id,case_id,contact_id,role) values(pg_temp.uid('oa'),pg_temp.uid('cb'),pg_temp.uid('request'),'seller')$q$,'23503');
+select pg_temp.verify('update not granted',$q$update public.office_case_parties set role='seller'$q$,'42501');
+select set_config('request.jwt.claims',jsonb_build_object('sub',pg_temp.uid('b'),'role','authenticated')::text,true);
+select pg_temp.verify('other tenant sees zero',$q$select count(*)::text from public.office_case_parties$q$,'0');
+select pg_temp.verify('other tenant insert denied',$q$insert into public.office_case_parties(office_id,case_id,contact_id,role) values(pg_temp.uid('oa'),pg_temp.uid('ca'),pg_temp.uid('request'),'seller')$q$,'42501');
+select set_config('request.jwt.claims',jsonb_build_object('sub',pg_temp.uid('outsider'),'role','authenticated')::text,true);
+select pg_temp.verify('non member reads zero',$q$select count(*)::text from public.office_case_parties$q$,'0');
+select set_config('request.jwt.claims',jsonb_build_object('sub',pg_temp.uid('viewer'),'role','authenticated')::text,true);
+select pg_temp.verify('viewer reads',$q$select count(*)::text from public.office_case_parties$q$,'1');
+select pg_temp.verify('viewer insert denied',$q$insert into public.office_case_parties(office_id,case_id,contact_id,role) values(pg_temp.uid('oa'),pg_temp.uid('ca'),pg_temp.uid('request'),'seller')$q$,'42501');
+select pg_temp.verify('viewer delete zero',$q$with r as(delete from public.office_case_parties returning id) select count(*)::text from r$q$,'0');
+select set_config('request.jwt.claims',jsonb_build_object('sub',pg_temp.uid('suspended'),'role','authenticated')::text,true);
+select pg_temp.verify('suspended reads zero',$q$select count(*)::text from public.office_case_parties$q$,'0');
+select set_config('request.jwt.claims',jsonb_build_object('sub',pg_temp.uid('a'),'role','authenticated','is_anonymous',true)::text,true);
+select pg_temp.verify('anonymous auth reads zero',$q$select count(*)::text from public.office_case_parties$q$,'0');
+select set_config('request.jwt.claims',jsonb_build_object('sub',pg_temp.uid('staff'),'role','authenticated')::text,true);
+select pg_temp.verify('staff insert',$q$with r as(insert into public.office_case_parties(office_id,case_id,contact_id,role) values(pg_temp.uid('oa'),pg_temp.uid('ca'),pg_temp.uid('request'),'seller') returning id) select count(*)::text from r$q$,'1');
+select pg_temp.verify('staff remove role',$q$with r as(delete from public.office_case_parties where role='seller' returning id) select count(*)::text from r$q$,'1');
+select pg_temp.verify('contact remains',$q$select count(*)::text from public.contacts where id=pg_temp.uid('request')$q$,'1');
+reset role;
+select jsonb_build_object('total',count(*),'passed',count(*) filter(where passed),'failures',coalesce(jsonb_agg(to_jsonb(r)) filter(where not passed),'[]'::jsonb)) as tests from results r;
+rollback;
