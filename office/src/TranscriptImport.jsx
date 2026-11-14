@@ -5,7 +5,7 @@ import SaveTranscript from './SaveTranscript';
 import {createOcrSession,needsOcr} from './transcriptOcr';
 import './transcript.css';
 
-export default function TranscriptImport() {
+export default function TranscriptImport({initialCaseId=''}) {
  const [result,setResult]=useState(null),[fileName,setFileName]=useState(''),[status,setStatus]=useState(''),[error,setError]=useState(''),[page,setPage]=useState(1),[busy,setBusy]=useState(false);
  const pdf=useRef(null),task=useRef(null),canvas=useRef(null),generation=useRef(0),pending=useRef(false);
  const ocr=useRef(null),cancelled=useRef(false);
@@ -75,7 +75,7 @@ export default function TranscriptImport() {
    await task.current?.destroy().catch(()=>{});task.current=null;pdf.current=null;setStatus('');
    if(id===generation.current){
     if(cancelled.current||e.message==='ocr-cancelled')setStatus('已取消，沒有傳送或儲存文件資料。');
-    else setError(/\.json$/i.test(file.name)?(e instanceof SyntaxError?'草稿不是有效的 JSON 檔，請選擇工作台下載的核對草稿。':e.message):e.name==='PasswordException'?'這份 PDF 有密碼，請先在本機解鎖後再選取。':e.message==='too-many-pages'?'一次最多讀取 40 頁，請先分檔。':e.message?.startsWith('ocr-heading:')?`第 ${e.message.split(':')[1]} 頁影像辨識無法確認地號／建號，已停止匯入，避免歸入錯誤標的。請使用較清晰、正向的掃描檔。`:e.message==='ocr-timeout'?'影像辨識逾時，請分成較少頁數或使用更清晰的檔案再試。':'未能完成辨識。請確認網路可載入辨識工具，使用清晰且正向的土地／建物謄本再試；無法讀取不代表謄本空白。');
+    else setError(/\.json$/i.test(file.name)?(e instanceof SyntaxError?'草稿不是有效的 JSON 檔，請選擇工作台下載的核對草稿。':e.message):e.name==='PasswordException'?'這份 PDF 有密碼，請先在本機解鎖後再選取。':e.message==='too-many-pages'?'一次最多讀取 40 頁，請先分檔。':e.message==='no-properties'?'PDF 已開啟，但沒有辨識到土地或建物謄本欄位。請確認檔案是地籍謄本；若是掃描影像，勾選「整份以影像辨識」後重新選檔。':e.message?.startsWith('ocr-heading:')?`第 ${e.message.split(':')[1]} 頁影像辨識無法確認地號／建號，已停止匯入，避免歸入錯誤標的。請使用較清晰、正向的掃描檔。`:e.message==='ocr-timeout'?'影像辨識逾時，請分成較少頁數或使用更清晰的檔案再試。':e.name==='InvalidPDFException'||e.name==='FormatError'?'這個檔案不是可讀取的 PDF，或檔案內容已損毀。請重新下載原始謄本 PDF 再試。':e.name==='MissingPDFException'?'找不到 PDF 檔案內容，請重新選取檔案。':e.message?.toLowerCase().includes('worker')?'PDF 讀取工具載入失敗，請重新整理工作台後再選檔；原始檔案不會上傳。':'PDF 讀取未完成。請確認檔案可正常開啟且是土地／建物謄本；若是掃描影像，勾選「整份以影像辨識」後重試。');
    }
   }finally{ocr.current?.cancel();ocr.current=null;pending.current=false;if(id===generation.current){setBusy(false);}}
  }
@@ -108,7 +108,7 @@ export default function TranscriptImport() {
   {result&&<><div className="transcript-summary"><strong>{fileName}</strong><span>{result.pageCount} 頁 · {result.properties.length} 筆標的 · 已核對 {reviewed}／{fields.length} 欄</span></div>
    <label className="review-check review-all"><input type="checkbox" checked={fields.length>0&&reviewed===fields.length} onChange={e=>setResult(current=>{const next=structuredClone(current);allFields(next).forEach(f=>{f.reviewed=e.target.checked;});return next;})}/>我已核對以上全部資料</label>
    <div className="notice"><strong>需要確認</strong><ul>{[...new Set(result.warnings)].map(w=><li key={w}>{w}</li>)}</ul></div>
-   <SaveTranscript key={documentVersion} result={result}/>
+   <SaveTranscript key={documentVersion} result={result} initialCaseId={initialCaseId}/>
    <div className={pdf.current?'transcript-layout':'transcript-restored'}><div className="transcript-data">{result.properties.map(p=><article key={p.key}><h2>{p.kind}｜{p.fields.find(f=>f.key==='number')?.value}</h2>{group('標示資料',p,0)}{p.owners.map((r,i)=>group(`所有權人 ${i+1}`,r,i))}{p.common.map((r,i)=>group(`共有部分 ${i+1}`,r,i))}{p.rights.map((r,i)=>group(`他項權利 ${i+1}`,r,i))}</article>)}</div>
    {pdf.current&&<aside className="transcript-preview"><div className="preview-controls"><button disabled={page<=1} onClick={()=>setPage(v=>v-1)}>上一頁</button><strong>原文 {page}／{result.pageCount}</strong><button disabled={page>=result.pageCount} onClick={()=>setPage(v=>v+1)}>下一頁</button></div><canvas ref={canvas} aria-label={`謄本原文第 ${page} 頁`}/></aside>}</div>
    <div className="transcript-finish"><label className="review-check review-all"><input type="checkbox" checked={fields.length>0&&reviewed===fields.length} onChange={e=>setResult(current=>{const next=structuredClone(current);allFields(next).forEach(f=>{f.reviewed=e.target.checked;});return next;})}/>我已核對以上全部資料</label><p>本機備份可保留核對狀態，下次從「讀回已核對草稿」繼續。下載備份不等於存入正式案件。</p><button className="primary" disabled={!fields.length||reviewed!==fields.length||fields.some(f=>!f.value.trim())} onClick={exportDraft}>下載已核對草稿</button></div>

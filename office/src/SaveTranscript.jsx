@@ -3,7 +3,7 @@ import {db} from './client';
 import {toStoragePayload} from './transcriptDraft';
 import CaseTranscripts from './CaseTranscripts';
 
-export default function SaveTranscript({result}){
+export default function SaveTranscript({result,initialCaseId=''}){
  const [session,setSession]=useState(undefined),[members,setMembers]=useState([]),[officeId,setOfficeId]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[retry,setRetry]=useState(0);
  const [legacyLogin,setLegacyLogin]=useState(false);
  const pending=useRef(false);
@@ -44,22 +44,30 @@ export default function SaveTranscript({result}){
  {session===undefined?<p role="status">確認登入狀態…</p>:!session?<div><p>使用地政士帳號登入即可自動開通工作台，不用另外註冊。登入會在新分頁完成，這裡的核對資料會保留。</p><div className="office-connect-actions"><a className="primary" href="/?connect=marketplace" target="_blank" rel="noopener noreferrer">使用地政士帳號登入 ↗</a><button type="button" onClick={checkSession} disabled={busy}>{busy?'確認中…':'已完成登入，重新確認'}</button></div><button type="button" className="text-button" onClick={()=>setLegacyLogin(v=>!v)} disabled={busy}>{legacyLogin?'收起既有帳號登入':'既有工作台帳號登入'}</button>{legacyLogin&&<form className="form-grid" onSubmit={login}><label>Email<input name="email" type="email" required autoComplete="email"/></label><label>密碼<input name="password" type="password" required autoComplete="current-password"/></label><button className="primary" disabled={busy}>{busy?'登入中…':'登入既有工作台並選擇案件'}</button></form>}</div>:<>
  <p>已登入：{session.user.email}</p><button type="button" onClick={()=>setRetry(v=>v+1)}>重新讀取事務所</button>
  {!loaded?<p role="status">讀取事務所…</p>:!members.length?<p>目前沒有可用的事務所成員資格。可<a href="/?connect=marketplace" target="_blank" rel="noopener noreferrer">另開工作台確認地政士帳號</a>，完成後回此頁重新讀取；核對資料會保留。</p>:<><label>儲存到哪間事務所<select value={officeId} onChange={e=>setOfficeId(e.target.value)}>{members.map(m=><option key={m.office_id} value={m.office_id}>{m.offices?.name||'事務所'}</option>)}</select></label>
- {validation.error?<p role="status">{validation.error}</p>:member&&['owner','admin','staff'].includes(member.role)?<SaveTarget key={session.user.id+officeId+JSON.stringify(validation.payload)} officeId={officeId} officeName={member.offices?.name} payload={validation.payload}/>:<p>目前是唯讀權限，無法存入案件。</p>}</>}
+ {validation.error?<p role="status">{validation.error}</p>:member&&['owner','admin','staff'].includes(member.role)?<SaveTarget key={session.user.id+officeId+JSON.stringify(validation.payload)} officeId={officeId} officeName={member.offices?.name} payload={validation.payload} initialCaseId={initialCaseId}/>:<p>目前是唯讀權限，無法存入案件。</p>}</>}
  </>}
  </section>;
 }
-function SaveTarget({officeId,officeName,payload}){
- const [mode,setMode]=useState('existing'),[search,setSearch]=useState(''),[cases,setCases]=useState([]),[caseId,setCaseId]=useState(''),[caseNumber,setCaseNumber]=useState(''),[title,setTitle]=useState(''),[confirmed,setConfirmed]=useState(false),[error,setError]=useState(''),[loadError,setLoadError]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[saved,setSaved]=useState(null);
+function SaveTarget({officeId,officeName,payload,initialCaseId=''}){
+ const [mode,setMode]=useState('existing'),[search,setSearch]=useState(''),[cases,setCases]=useState([]),[caseId,setCaseId]=useState(initialCaseId),[caseNumber,setCaseNumber]=useState(''),[title,setTitle]=useState(''),[confirmed,setConfirmed]=useState(false),[error,setError]=useState(''),[loadError,setLoadError]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[saved,setSaved]=useState(null);
  const request=useRef(null),pending=useRef(false);
  useEffect(()=>{
   const abort=new AbortController();
   const timer=setTimeout(()=>{
    let q=db.from('office_cases').select('id,case_number,title').eq('office_id',officeId).order('updated_at',{ascending:false}).limit(50);
    if(search.trim())q=q.ilike('title','%'+search.trim().replace(/[\\%_]/g,'\\$&')+'%');
-   q.abortSignal(abort.signal).then(({data,error})=>{if(!abort.signal.aborted){setCases(data||[]);setLoading(false);setLoadError(error?'案件清單讀取失敗，請更改搜尋或重新讀取事務所。':'');}}).catch(()=>{if(!abort.signal.aborted){setLoading(false);setLoadError('案件清單連線失敗。');}});
+   q.abortSignal(abort.signal).then(async({data,error})=>{
+    if(abort.signal.aborted)return;
+    let list=data||[];
+    if(!error&&initialCaseId&&!list.some(item=>item.id===initialCaseId)){
+     const target=await db.from('office_cases').select('id,case_number,title').eq('office_id',officeId).eq('id',initialCaseId).maybeSingle().abortSignal(abort.signal);
+     if(target.data)list=[target.data,...list];
+    }
+    if(!abort.signal.aborted){setCases(list);setLoading(false);setLoadError(error?'案件清單讀取失敗，請更改搜尋或重新讀取事務所。':'');}
+   }).catch(()=>{if(!abort.signal.aborted){setLoading(false);setLoadError('案件清單連線失敗。');}});
   },250);
   return()=>{clearTimeout(timer);abort.abort();};
- },[officeId,search]);
+ },[officeId,search,initialCaseId]);
  const selected=cases.find(c=>c.id===caseId);
  async function save(e){
   e.preventDefault();if(pending.current||!confirmed)return;pending.current=true;setBusy(true);setError('');

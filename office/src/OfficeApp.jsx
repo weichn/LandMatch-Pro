@@ -14,7 +14,7 @@ function Notice({ children, error = false }) {
 }
 function Brand() { return <a className="brand" href="/"><span className="brand-mark">L.</span><span>LandMatch <b>Office</b><small>事務所工作台</small></span></a>; }
 
-export default function OfficeApp() {
+export default function OfficeApp({initialTab='office_cases'}) {
  const [auth, setAuth] = useState({ ready:false, session:null, error:'' });
  useEffect(() => {
   let active=true,seen=false;
@@ -28,7 +28,7 @@ export default function OfficeApp() {
   return ()=>{active=false;subscription.unsubscribe();};
  },[]);
  return <div className="office-app"><header className="topbar"><Brand/><a className="back-link" href={marketplace}>返回媒合平台 ↗</a></header>
- {!auth.ready ? <main className="loading" role="status">正在確認登入狀態…</main> : auth.error ? <main><Notice error>{auth.error}</Notice></main> : auth.session ? <Workspace key={auth.session.user.id} user={auth.session.user}/> : <AuthScreen/>}
+ {!auth.ready ? <main className="loading" role="status">正在確認登入狀態…</main> : auth.error ? <main><Notice error>{auth.error}</Notice></main> : auth.session ? <Workspace key={auth.session.user.id} user={auth.session.user} initialTab={initialTab}/> : <AuthScreen/>}
  <footer className="site-footer">LandMatch Pro Office <span>讓案件有條理，讓辦案更專注。</span></footer></div>;
 }
 export function AuthScreen() {
@@ -58,12 +58,13 @@ export function AuthScreen() {
  {!legacy?<><button className="primary wide" type="button" disabled={busy} onClick={professionalLogin}>{busy?'正在前往地政士登入…':'使用地政士帳號登入 →'}</button><p className="office-connect-signup">還沒有地政士帳號？<a href={marketplace}>前往媒合平台免費註冊</a></p></>:<form onSubmit={submit}><p>此處供原本已建立的工作台帳號登入；原事務所與案件資料會保留。</p><label>Email<input type="email" name="email" required autoComplete="email" maxLength={254}/></label><label>密碼<input type="password" name="password" required autoComplete="current-password"/></label><button className="primary wide" disabled={busy}>{busy?'處理中…':'登入既有工作台'}</button></form>}
  <button className="text-button" type="button" disabled={busy} onClick={()=>{setLegacy(v=>!v);setError('');}}>{legacy?'改用地政士帳號登入':'既有工作台帳號登入'}</button></section></main>;
 }
-function Workspace({user}) {
+function Workspace({user,initialTab='office_cases'}) {
  const [memberships,setMemberships]=useState(null);
  const [officeId,setOfficeId]=useState('');
  const [error,setError]=useState('');
  const [revision,setRevision]=useState(0);
- const [tab,setTab]=useState('office_cases');
+ const [tab,setTab]=useState(initialTab);
+ const [transcriptTargetCaseId,setTranscriptTargetCaseId]=useState('');
  const [signingOut,setSigningOut]=useState(false);
  useEffect(()=>{
   const controller=new AbortController();
@@ -84,12 +85,12 @@ function Workspace({user}) {
  const membership=memberships?.find(m=>m.office_id===officeId);
  return <div className="workspace"><aside className="sidebar"><div className="sidebar-label">我的事務所</div>
  {memberships?.length>0&&<label className="office-switch"><span className="sr-only">切換事務所</span><select value={officeId} onChange={e=>setOfficeId(e.target.value)}>{memberships.map(m=><option key={m.id} value={m.office_id}>{m.offices?.name||'事務所'}</option>)}</select></label>}
- <nav aria-label="工作台功能">{[['import','↥','謄本匯入'],['office_cases','▤','案件管理'],['contacts','◎','聯絡人'],['organizations','▦','往來組織'],['settings','⚙','事務所設定']].map(([id,icon,label])=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>setTab(id)} aria-current={tab===id?'page':undefined}><span>{icon}</span>{label}</button>)}</nav>
+ <nav aria-label="工作台功能">{[['import','↥','謄本匯入'],['office_cases','▤','案件管理'],['contacts','◎','聯絡人'],['organizations','▦','往來組織'],['settings','⚙','事務所設定']].map(([id,icon,label])=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>{setTab(id);if(id==='import')setTranscriptTargetCaseId('');}} aria-current={tab===id?'page':undefined}><span>{icon}</span>{label}</button>)}</nav>
  <div className="user-panel"><span className="role-badge">{roleLabels[membership?.role]||'Office 帳號'}</span><p>{user.email}</p><button className="text-button" onClick={logout} disabled={signingOut}>{signingOut?'登出中…':'登出工作台'}</button></div></aside>
  <main className="workspace-main"><Notice error>{error}</Notice>{error&&<button onClick={()=>setRevision(v=>v+1)}>重試讀取</button>}
  {!memberships&&!error&&<p role="status">讀取事務所中…</p>}
  {memberships?.length===0&&<Onboarding onCreated={()=>setRevision(v=>v+1)}/>}
- {membership && (tab==='import'?<Suspense fallback={<p>載入謄本匯入…</p>}><TranscriptImport key={officeId}/></Suspense>:tab==='settings'?<Settings key={officeId} membership={membership} onSaved={()=>setRevision(v=>v+1)}/>:<Records key={officeId+tab} table={tab} membership={membership}/>)}
+ {membership && (tab==='import'?<Suspense fallback={<p>載入謄本匯入…</p>}><TranscriptImport key={officeId+transcriptTargetCaseId} initialCaseId={transcriptTargetCaseId}/></Suspense>:tab==='settings'?<Settings key={officeId} membership={membership} onSaved={()=>setRevision(v=>v+1)}/>:<Records key={officeId+tab} table={tab} membership={membership} onImportTranscript={row=>{setTranscriptTargetCaseId(row.id);setTab('import');}}/>)}
  </main></div>;
 }
 function Onboarding({onCreated}) {
@@ -103,7 +104,7 @@ function Onboarding({onCreated}) {
  }
  return <section className="onboarding"><div className="eyebrow">WELCOME TO YOUR OFFICE</div><h1>從你的事務所開始。</h1><p>建立工作空間後，即可整理案件、建立聯絡人與往來組織。</p><form onSubmit={submit}><label>事務所名稱<input name="name" placeholder="例如：桓宸地政士事務所" required maxLength={200}/></label><Notice error>{error}</Notice><button className="primary" disabled={busy}>{busy?'建立中…':'建立我的事務所 →'}</button></form><small>使用已登入的 Office 帳號建立。若你已有成員資格或帳號被停權，請聯絡事務所管理員。</small></section>;
 }
-function Records({table,membership}) {
+function Records({table,membership,onImportTranscript}) {
  const def=definitions[table], officeId=membership.office_id;
  const canWrite=['owner','admin','staff'].includes(membership.role), canDelete=['owner','admin'].includes(membership.role);
  const [rows,setRows]=useState([]),[total,setTotal]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState('');
@@ -131,7 +132,7 @@ function Records({table,membership}) {
  <div className="list-toolbar"><label className="search"><span className="sr-only">搜尋{def.label}名稱</span><input value={search} onChange={e=>{setSearch(e.target.value);setLoading(e.target.value.trim()!==query);}} placeholder={'搜尋'+def.label+'名稱…'} maxLength={100}/></label><span>{loading?'讀取中…':total+' 筆資料'}</span><button className="quiet" onClick={()=>refresh('')}>重新整理</button></div>
  <Notice error>{error}</Notice><Notice>{message}</Notice>
  {loading?<div className="empty" role="status">讀取資料中…</div>:!rows.length?<div className="empty"><span className="empty-symbol">{table==='office_cases'?'▤':'◎'}</span><h2>{query?'沒有符合的結果':'尚未建立'+def.label}</h2><p>{query?'試試其他名稱。':canWrite?'從新增第一筆資料開始，逐步整理你的事務所。':'目前沒有可檢視的資料。'}</p>{canWrite&&!query&&<button onClick={()=>setEditor({})}>新增{def.label}</button>}</div>:
- <div className="table-wrap"><table><thead><tr>{table==='office_cases'&&<th>案號</th>}<th>{def.label}名稱</th><th>{table==='office_cases'?'進度':'電話'}</th><th>{table==='office_cases'?'類型':'Email'}</th><th>更新日期</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>{rows.map(row=><tr key={row.id}>{table==='office_cases'&&<td className="case-number">{row.case_number}</td>}<td><button className="record-name" onClick={()=>setEditor(row)}>{row[def.name]}</button></td><td>{table==='office_cases'?<span className={'status '+row.status}>{statusLabels[row.status]}</span>:row.phone||'—'}</td><td>{table==='office_cases'?row.case_type:row.email||'—'}</td><td>{new Date(row.updated_at).toLocaleDateString('zh-TW')}</td><td>{table==='office_cases'&&<><button className="text-button" onClick={()=>setTranscriptCase(row)}>地籍資料</button><button className="text-button" onClick={()=>setPartyCase(row)}>買賣當事人</button><button className="text-button" onClick={()=>{setDocumentCase(row);setDocumentDirty(false);setConfirmDocumentClose(false);}}>官方書表</button></>}{canDelete&&<button className="text-button danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>}</td></tr>)}</tbody></table></div>}
+ <div className="table-wrap"><table><thead><tr>{table==='office_cases'&&<th>案號</th>}<th>{def.label}名稱</th><th>{table==='office_cases'?'進度':'電話'}</th><th>{table==='office_cases'?'類型':'Email'}</th><th>更新日期</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>{rows.map(row=><tr key={row.id}>{table==='office_cases'&&<td className="case-number">{row.case_number}</td>}<td><button className="record-name" onClick={()=>setEditor(row)}>{row[def.name]}</button></td><td>{table==='office_cases'?<span className={'status '+row.status}>{statusLabels[row.status]}</span>:row.phone||'—'}</td><td>{table==='office_cases'?row.case_type:row.email||'—'}</td><td>{new Date(row.updated_at).toLocaleDateString('zh-TW')}</td><td>{table==='office_cases'&&<><button className="text-button" onClick={()=>onImportTranscript(row)}>謄本匯入</button><button className="text-button" onClick={()=>setTranscriptCase(row)}>地籍資料</button><button className="text-button" onClick={()=>setPartyCase(row)}>買賣當事人</button><button className="text-button" onClick={()=>{setDocumentCase(row);setDocumentDirty(false);setConfirmDocumentClose(false);}}>官方書表</button></>}{canDelete&&<button className="text-button danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>}</td></tr>)}</tbody></table></div>}
  <div className="pagination"><button disabled={page===0||loading} onClick={()=>{setLoading(true);setPage(p=>p-1);}}>上一頁</button><span>第 {page+1} 頁</span><button disabled={(page+1)*20>=total||loading} onClick={()=>{setLoading(true);setPage(p=>p+1);}}>下一頁</button></div>
  {editor&&<RecordEditor table={table} row={editor} officeId={officeId} canWrite={canWrite} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);refresh('資料已儲存。');}}/>}
  {transcriptCase&&<Modal title={transcriptCase.case_number+"｜案件地籍資料"} onClose={()=>setTranscriptCase(null)}><Suspense fallback={<p>載入案件資料…</p>}><CaseTranscripts officeId={officeId} caseId={transcriptCase.id}/></Suspense></Modal>}
