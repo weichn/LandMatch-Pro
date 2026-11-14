@@ -106,6 +106,7 @@ export default function TranscriptImport() {
   {selectedFile.current&&!busy&&<button type="button" onClick={()=>read(selectedFile.current)}>重新讀取此 PDF（清除本頁核對）</button>}
   {status&&<p role="status">{status}</p>}{busy&&<button type="button" onClick={cancelRead}>取消讀取</button>}{error&&<p className="notice error" role="alert">{error}</p>}
   {result&&<><div className="transcript-summary"><strong>{fileName}</strong><span>{result.pageCount} 頁 · {result.properties.length} 筆標的 · 已核對 {reviewed}／{fields.length} 欄</span></div>
+   <label className="review-check review-all"><input type="checkbox" checked={fields.length>0&&reviewed===fields.length} onChange={e=>setResult(current=>{const next=structuredClone(current);allFields(next).forEach(f=>{f.reviewed=e.target.checked;});return next;})}/>我已核對以上全部資料</label>
    <div className="notice"><strong>需要確認</strong><ul>{[...new Set(result.warnings)].map(w=><li key={w}>{w}</li>)}</ul></div>
    <SaveTranscript key={documentVersion} result={result}/>
    <div className={pdf.current?'transcript-layout':'transcript-restored'}><div className="transcript-data">{result.properties.map(p=><article key={p.key}><h2>{p.kind}｜{p.fields.find(f=>f.key==='number')?.value}</h2>{group('標示資料',p,0)}{p.owners.map((r,i)=>group(`所有權人 ${i+1}`,r,i))}{p.common.map((r,i)=>group(`共有部分 ${i+1}`,r,i))}{p.rights.map((r,i)=>group(`他項權利 ${i+1}`,r,i))}</article>)}</div>
