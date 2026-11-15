@@ -6,7 +6,7 @@ import {createOcrSession,needsOcr} from './transcriptOcr';
 import './transcript.css';
 
 export default function TranscriptImport({initialCaseId=''}) {
- const [result,setResult]=useState(null),[fileName,setFileName]=useState(''),[status,setStatus]=useState(''),[error,setError]=useState(''),[page,setPage]=useState(1),[busy,setBusy]=useState(false);
+ const [result,setResult]=useState(null),[fileName,setFileName]=useState(''),[selectedFileName,setSelectedFileName]=useState(''),[draftFileName,setDraftFileName]=useState(''),[status,setStatus]=useState(''),[error,setError]=useState(''),[page,setPage]=useState(1),[busy,setBusy]=useState(false);
  const pdf=useRef(null),task=useRef(null),canvas=useRef(null),generation=useRef(0),pending=useRef(false);
  const ocr=useRef(null),cancelled=useRef(false);
  const selectedFile=useRef(null);
@@ -29,6 +29,7 @@ export default function TranscriptImport({initialCaseId=''}) {
   if(!file||pending.current)return;
   pending.current=true;setBusy(true);
   selectedFile.current=/\.pdf$/i.test(file.name)?file:null;
+  if(/\.json$/i.test(file.name))setDraftFileName(file.name);else setSelectedFileName(file.name);
   cancelled.current=false;
   const id=++generation.current;
   setResult(null);setError('');setStatus('');setFileName('');
@@ -101,7 +102,7 @@ export default function TranscriptImport({initialCaseId=''}) {
   <a href="/">← 返回 Office 工作台</a><div className="eyebrow">DOCUMENT TO DATA</div><h1>從謄本，自動帶入資料</h1>
   <p>選取電子或掃描地籍謄本，先帶出土地、建物、所有權人與他項權利，再對照原文核對。</p>
   <label className="review-check"><input type="checkbox" checked={forceOcr} disabled={busy} onChange={e=>setForceOcr(e.target.checked)}/>整份以影像辨識（適用文字層缺漏；需重新選檔）</label>
-  <div className="transcript-upload"><label>選取謄本 PDF<input aria-label="選取謄本 PDF" type="file" accept="application/pdf,.pdf" disabled={busy} onClick={e=>{e.currentTarget.value='';}} onChange={e=>read(e.target.files?.[0])}/></label><label>或讀回已核對草稿<input aria-label="讀回已核對草稿" type="file" accept="application/json,.json" disabled={busy} onClick={e=>{e.currentTarget.value='';}} onChange={e=>read(e.target.files?.[0])}/></label><small>選檔只在本機解析。按下「確認存入正式案件」才傳送核對資料，原始 PDF 不上傳；未儲存前離開或重新整理會清除。</small></div>
+  <div className="transcript-upload"><div className="transcript-file-row"><strong>選取謄本 PDF</strong><label className="transcript-file-button">瀏覽檔案<input aria-label="選取謄本 PDF" type="file" accept="application/pdf,.pdf" disabled={busy} onClick={e=>{e.currentTarget.value='';}} onChange={e=>read(e.target.files?.[0])}/></label><span className="transcript-file-name" role="status">{selectedFileName||'尚未選擇檔案'}</span></div><div className="transcript-file-row"><strong>讀回已核對草稿</strong><label className="transcript-file-button">瀏覽檔案<input aria-label="讀回已核對草稿" type="file" accept="application/json,.json" disabled={busy} onClick={e=>{e.currentTarget.value='';}} onChange={e=>read(e.target.files?.[0])}/></label><span className="transcript-file-name" role="status">{draftFileName||'尚未選擇檔案'}</span></div><small>選檔只在本機解析。按下「確認存入正式案件」才傳送核對資料，原始 PDF 不上傳；未儲存前離開或重新整理會清除。</small></div>
   <p>無文字頁面會自動在本機辨識。影像辨識目前為試用功能，複雜底紋或模糊掃描可能無法讀取。首次使用需下載辨識工具，最多 40 頁。</p>
   {selectedFile.current&&!busy&&<button type="button" onClick={()=>read(selectedFile.current)}>重新讀取此 PDF（清除本頁核對）</button>}
   {status&&<p role="status">{status}</p>}{busy&&<button type="button" onClick={cancelRead}>取消讀取</button>}{error&&<p className="notice error" role="alert">{error}</p>}

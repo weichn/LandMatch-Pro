@@ -85,7 +85,7 @@ function Workspace({user,initialTab='office_cases'}) {
  const membership=memberships?.find(m=>m.office_id===officeId);
  return <div className="workspace"><aside className="sidebar"><div className="sidebar-label">我的事務所</div>
  {memberships?.length>0&&<label className="office-switch"><span className="sr-only">切換事務所</span><select value={officeId} onChange={e=>setOfficeId(e.target.value)}>{memberships.map(m=><option key={m.id} value={m.office_id}>{m.offices?.name||'事務所'}</option>)}</select></label>}
- <nav aria-label="工作台功能">{[['import','↥','謄本匯入'],['office_cases','▤','案件管理'],['contacts','◎','聯絡人'],['organizations','▦','往來組織'],['settings','⚙','事務所設定']].map(([id,icon,label])=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>{setTab(id);if(id==='import')setTranscriptTargetCaseId('');}} aria-current={tab===id?'page':undefined}><span>{icon}</span>{label}</button>)}</nav>
+ <nav aria-label="工作台功能">{[['office_cases','▤','案件管理'],['contacts','◎','聯絡人'],['organizations','▦','往來組織'],['settings','⚙','事務所設定']].map(([id,icon,label])=><button key={id} className={tab===id?'nav-item active':'nav-item'} onClick={()=>setTab(id)} aria-current={tab===id?'page':undefined}><span>{icon}</span>{label}</button>)}</nav>
  <div className="user-panel"><span className="role-badge">{roleLabels[membership?.role]||'Office 帳號'}</span><p>{user.email}</p><button className="text-button" onClick={logout} disabled={signingOut}>{signingOut?'登出中…':'登出工作台'}</button></div></aside>
  <main className="workspace-main"><Notice error>{error}</Notice>{error&&<button onClick={()=>setRevision(v=>v+1)}>重試讀取</button>}
  {!memberships&&!error&&<p role="status">讀取事務所中…</p>}
