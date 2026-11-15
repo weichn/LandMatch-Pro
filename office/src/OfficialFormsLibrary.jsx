@@ -39,7 +39,7 @@ const reasonTerms={
 function relevance(form,reason){
  const terms=reasonTerms[reason];if(!terms)return 0;
  const label=form.label||'',context=form.context||'';
- return terms.reduce((score,term)=>score+(label.includes(term)?(term==='土地登記申請書'?1:5)+(context.includes(reason)?2:0):context.includes(term)?4:0),0);
+ return terms.reduce((score,term)=>score+(label.includes(term)?(term==='土地登記申請書'?2:8)+(context.includes(reason)?4:0):context.includes(term)?6:0),0);
 }
 export default function OfficialFormsLibrary({onUseTemplate,initialFormId='',registrationReason=''}){
  const [query,setQuery]=useState(''),[category,setCategory]=useState(''),[variant,setVariant]=useState('blank');
@@ -47,6 +47,20 @@ export default function OfficialFormsLibrary({onUseTemplate,initialFormId='',reg
  const revision=useRef(0);
  const categories=[...new Set(officialFormsCatalog.forms.map(f=>f.category))];
  const rows=useMemo(()=>officialFormsCatalog.forms.filter(f=>(!category||f.category===category)&&(!variant||f.variant===variant)&&(!query||[f.label,f.context,f.provider].join(' ').includes(query.trim()))).sort((a,b)=>relevance(b,registrationReason)-relevance(a,registrationReason)),[query,category,variant,registrationReason]);
+ const recommendedRows=useMemo(()=>registrationReason?rows.filter(form=>relevance(form,registrationReason)>0).slice(0,6):[],[rows,registrationReason]);
+ const recommendedIds=new Set(recommendedRows.map(form=>form.id));
+ const renderForms=forms=>forms.map(form=><article className="forms-library-item" key={form.id}>
+   <div><h4>{form.label}</h4><p>{form.context} · {form.provider} · {variantNames[form.variant]}</p>{form.notes?.map((note,i)=><p key={i}>{note}</p>)}</div>
+   <div className="document-inline-actions">
+    {caseTemplateFor(form)&&<button type="button" onClick={()=>onUseTemplate(caseTemplateFor(form),form.context)}>使用案件套印版</button>}
+    {form.localFile&&<button type="button" disabled={busy} onClick={()=>preview(form)}>預覽{form.variant==='blank'?'空白表':'文件'}</button>}
+    {form.pdfUrl&&<a href={form.pdfUrl} target="_blank" rel="noreferrer">官方 PDF ↗</a>}
+    {form.odtUrl&&<a href={form.odtUrl} target="_blank" rel="noreferrer">下載 ODT ↗</a>}
+    {form.docUrl&&<a href={form.docUrl} target="_blank" rel="noreferrer">下載 Word ↗</a>}
+    {form.otherUrls?.map(item=><a href={item.url} key={item.url} target="_blank" rel="noreferrer">下載 {item.format.toUpperCase()} ↗</a>)}
+    {!form.pdfUrl&&!form.odtUrl&&!form.docUrl&&<a href={form.sourceUrl} target="_blank" rel="noreferrer">至官方目錄查看 ↗</a>}
+   </div>
+  </article>);
  async function preview(form,paper=layout){
   const current=++revision.current;setSelected(form);setBytes(null);setError('');setBusy(true);
   try{
@@ -74,19 +88,10 @@ export default function OfficialFormsLibrary({onUseTemplate,initialFormId='',reg
    <label>類別<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">全部類別</option>{categories.map(c=><option key={c}>{c}</option>)}</select></label>
    <label>文件種類<select value={variant} onChange={e=>setVariant(e.target.value)}><option value="">全部種類</option>{Object.entries(variantNames).map(([id,label])=><option value={id} key={id}>{label}</option>)}</select></label>
   </div>
-  <p className="form-note">找到 {rows.length} 項（含機關及情境版本）。{registrationReason?`已依「${registrationReason}」將常用書表排在前面；以下仍可瀏覽全部書表。`:''}案件套印版採新竹市地政事務所官方範本；其他書表可下載各機關原檔編輯或列印。</p>
-  <div className="forms-library-list">{rows.map(form=><article className="forms-library-item" key={form.id}>
-   <div><h4>{form.label}</h4><p>{form.context} · {form.provider} · {variantNames[form.variant]}</p>{form.notes?.map((note,i)=><p key={i}>{note}</p>)}</div>
-   <div className="document-inline-actions">
-    {caseTemplateFor(form)&&<button type="button" onClick={()=>onUseTemplate(caseTemplateFor(form),form.context)}>使用案件套印版</button>}
-    {form.localFile&&<button type="button" disabled={busy} onClick={()=>preview(form)}>預覽{form.variant==='blank'?'空白表':'文件'}</button>}
-    {form.pdfUrl&&<a href={form.pdfUrl} target="_blank" rel="noreferrer">官方 PDF ↗</a>}
-    {form.odtUrl&&<a href={form.odtUrl} target="_blank" rel="noreferrer">下載 ODT ↗</a>}
-    {form.docUrl&&<a href={form.docUrl} target="_blank" rel="noreferrer">下載 Word ↗</a>}
-    {form.otherUrls?.map(item=><a href={item.url} key={item.url} target="_blank" rel="noreferrer">下載 {item.format.toUpperCase()} ↗</a>)}
-    {!form.pdfUrl&&!form.odtUrl&&!form.docUrl&&<a href={form.sourceUrl} target="_blank" rel="noreferrer">至官方目錄查看 ↗</a>}
-   </div>
-  </article>)}</div>
+  <p className="form-note">找到 {rows.length} 項（含機關及情境版本）。案件套印版採新竹市地政事務所官方範本；其他書表可下載各機關原檔編輯或列印。</p>
+  {recommendedRows.length>0&&<section className="forms-recommended"><h3>{registrationReason}案件常用書表</h3><p className="form-note">依案件登記原因，先列出對應的官方申請書、契約書及相關文件。</p><div className="forms-library-list">{renderForms(recommendedRows)}</div></section>}
+  <h3>全部官方書表</h3>
+  <div className="forms-library-list">{renderForms(rows.filter(form=>!recommendedIds.has(form.id)))}</div>
   {!rows.length&&<p role="status">沒有符合的書表，請改用其他關鍵字或切換類別。</p>}
   {selected&&<section className="forms-library-preview">
    <h3>{selected.label}｜{variantNames[selected.variant]}</h3>
