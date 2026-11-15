@@ -16,4 +16,5 @@
 .workspace-main{margin-left:240px}
 @media(max-width:1000px){.sidebar{width:200px}.workspace-main{margin-left:200px}}
 @media(max-width:700px){.office-app{padding-top:75px}.office-app>.topbar{height:75px}.workspace{padding-top:165px}.sidebar{left:0;right:0;top:75px;bottom:auto;width:100%;height:auto;max-height:165px;overflow-y:auto}.workspace-main{margin-left:0}}
+.case-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:330px}.case-action{padding:7px 10px;border:1px solid #dce5da;border-radius:7px;background:#fff;color:#315b49;font-size:12px;line-height:1.35;white-space:nowrap;transition:background-color .15s,border-color .15s,transform .15s}.case-action:hover:not(:disabled){background:#eef4eb;border-color:#b9cbb9;transform:translateY(-1px)}.case-action.is-danger{color:#a25043;border-color:#ead8d3;background:#fffafa}.case-action.is-danger:hover:not(:disabled){background:#fcf0ec;border-color:#d9b7ad}
 
