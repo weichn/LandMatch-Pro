@@ -16,12 +16,37 @@ function caseTemplateFor(form){
  return '';
 }
 const variantNames={blank:'空白書表',example:'填寫範例',instructions:'填寫說明'};
-export default function OfficialFormsLibrary({onUseTemplate,initialFormId=''}){
+const reasonTerms={
+ '第一次登記':['第一次登記','建物測量','土地登記申請書'],
+ '買賣':['買賣','土地登記申請書'],
+ '贈與':['贈與','土地登記申請書'],
+ '繼承':['繼承','遺產','系統表','土地登記申請書'],
+ '分割繼承':['分割繼承','繼承','遺產','系統表','土地登記申請書'],
+ '拍賣':['拍賣','法院','土地登記申請書'],
+ '共有物分割':['共有物分割','所有權分割','土地登記申請書'],
+ '設定':['抵押權設定','設定契約書','土地登記申請書'],
+ '法定':['法定','土地登記申請書'],
+ '清償':['清償','抵押權','塗銷','土地登記申請書'],
+ '拋棄':['拋棄','放棄','抵押權','土地登記申請書'],
+ '混同':['混同','抵押權','土地登記申請書'],
+ '判決塗銷':['判決塗銷','判決','塗銷','土地登記申請書'],
+ '權利價值變更':['權利價值變更','抵押權移轉變更','土地登記申請書'],
+ '權利內容等變更':['權利內容等變更','內容變更','抵押權移轉變更','土地登記申請書'],
+ '分割':['共有物分割','所有權分割','分割','土地登記申請書'],
+ '合併':['合併','土地複丈','土地鑑界','土地登記申請書'],
+ '地目變更':['地目變更','標示變更','土地複丈','土地登記申請書'],
+};
+function relevance(form,reason){
+ const terms=reasonTerms[reason];if(!terms)return 0;
+ const label=form.label||'',context=form.context||'';
+ return terms.reduce((score,term)=>score+(label.includes(term)?(term==='土地登記申請書'?1:5)+(context.includes(reason)?2:0):context.includes(term)?4:0),0);
+}
+export default function OfficialFormsLibrary({onUseTemplate,initialFormId='',registrationReason=''}){
  const [query,setQuery]=useState(''),[category,setCategory]=useState(''),[variant,setVariant]=useState('blank');
  const [selected,setSelected]=useState(null),[bytes,setBytes]=useState(null),[layout,setLayout]=useState('original'),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const revision=useRef(0);
  const categories=[...new Set(officialFormsCatalog.forms.map(f=>f.category))];
- const rows=useMemo(()=>officialFormsCatalog.forms.filter(f=>(!category||f.category===category)&&(!variant||f.variant===variant)&&(!query||[f.label,f.context,f.provider].join(' ').includes(query.trim()))),[query,category,variant]);
+ const rows=useMemo(()=>officialFormsCatalog.forms.filter(f=>(!category||f.category===category)&&(!variant||f.variant===variant)&&(!query||[f.label,f.context,f.provider].join(' ').includes(query.trim()))).sort((a,b)=>relevance(b,registrationReason)-relevance(a,registrationReason)),[query,category,variant,registrationReason]);
  async function preview(form,paper=layout){
   const current=++revision.current;setSelected(form);setBytes(null);setError('');setBusy(true);
   try{
@@ -49,7 +74,7 @@ export default function OfficialFormsLibrary({onUseTemplate,initialFormId=''}){
    <label>類別<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">全部類別</option>{categories.map(c=><option key={c}>{c}</option>)}</select></label>
    <label>文件種類<select value={variant} onChange={e=>setVariant(e.target.value)}><option value="">全部種類</option>{Object.entries(variantNames).map(([id,label])=><option value={id} key={id}>{label}</option>)}</select></label>
   </div>
-  <p className="form-note">找到 {rows.length} 項（含機關及情境版本）。案件套印版採新竹市地政事務所官方範本；其他書表可下載各機關原檔編輯或列印。</p>
+  <p className="form-note">找到 {rows.length} 項（含機關及情境版本）。{registrationReason?`已依「${registrationReason}」將常用書表排在前面；以下仍可瀏覽全部書表。`:''}案件套印版採新竹市地政事務所官方範本；其他書表可下載各機關原檔編輯或列印。</p>
   <div className="forms-library-list">{rows.map(form=><article className="forms-library-item" key={form.id}>
    <div><h4>{form.label}</h4><p>{form.context} · {form.provider} · {variantNames[form.variant]}</p>{form.notes?.map((note,i)=><p key={i}>{note}</p>)}</div>
    <div className="document-inline-actions">

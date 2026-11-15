@@ -6,7 +6,7 @@ const SaleParties = lazy(() => import('./SaleParties'));
 const CaseDocuments = lazy(() => import('./CaseDocuments'));
 import { db } from './client';
 import { beginOfficeConnection, OfficeConnectError } from './officeConnect';
-import { definitions, statusLabels, roleLabels, caseTypes, payloadFor, errorText } from './model';
+import { definitions, statusLabels, roleLabels, caseTypes, registrationReasons, payloadFor, errorText } from './model';
 
 const marketplace = 'https://land-match-pro.vercel.app/';
 function Notice({ children, error = false }) {
@@ -111,7 +111,7 @@ function Records({table,membership,onImportTranscript}) {
  const [search,setSearch]=useState(''),[query,setQuery]=useState(''),[page,setPage]=useState(0),[revision,setRevision]=useState(0);
  const [transcriptCase,setTranscriptCase]=useState(null),[partyCase,setPartyCase]=useState(null);
  const [documentCase,setDocumentCase]=useState(null),[documentDirty,setDocumentDirty]=useState(false),[confirmDocumentClose,setConfirmDocumentClose]=useState(false);
- const [editor,setEditor]=useState(null),[deleting,setDeleting]=useState(null),[message,setMessage]=useState('');
+ const [editor,setEditor]=useState(null),[deleting,setDeleting]=useState(null),[message,setMessage]=useState(''),[savingCaseId,setSavingCaseId]=useState('');
  useEffect(()=>{const timer=setTimeout(()=>{setQuery(search.trim());setPage(0);},250);return()=>clearTimeout(timer);},[search]);
  useEffect(()=>{
   const controller=new AbortController();
@@ -127,12 +127,46 @@ function Records({table,membership,onImportTranscript}) {
   return ()=>controller.abort();
  },[table,def.columns,def.name,officeId,page,query,revision]);
  function refresh(text){setMessage(text);setLoading(true);setRevision(v=>v+1);}
+ async function updateCaseField(row,key,value){
+  if(!canWrite||savingCaseId)return;
+  if((row[key]||'')===value)return;
+  setSavingCaseId(row.id);setError('');
+  try{
+   const {data,error}=await db.from('office_cases').update({[key]:value||null}).eq('office_id',officeId).eq('id',row.id).eq('updated_at',row.updated_at).select('id');
+   if(error)setError(errorText(error));
+   else if(data?.length!==1)setError('案件資料已變更，請重新整理後再選擇。');
+   else refresh(key==='registration_reason'?'登記原因已儲存。':'案件種類已儲存。');
+  }catch{setError('儲存未完成，請稍後重試。');}
+  finally{setSavingCaseId('');}
+ }
  function closeDocuments(){if(documentDirty){setConfirmDocumentClose(true);return;}setDocumentCase(null);}
  return <><div className="page-heading"><div><div className="eyebrow">OFFICE / {table==='office_cases'?'CASES':table==='contacts'?'CONTACTS':'ORGANIZATIONS'}</div><h1>{def.label}管理</h1><p>{table==='office_cases'?'每件委託的進度，都在這裡。':table==='contacts'?'建立聯絡資料，讓每一次聯繫都有依據。':'集中管理銀行、仲介與合作單位。'}</p></div>{canWrite&&<button className="primary" onClick={()=>setEditor({})}>＋ 新增{def.label}</button>}</div>
  <div className="list-toolbar"><label className="search"><span className="sr-only">搜尋{def.label}名稱</span><input value={search} onChange={e=>{setSearch(e.target.value);setLoading(e.target.value.trim()!==query);}} placeholder={'搜尋'+def.label+'名稱…'} maxLength={100}/></label><span>{loading?'讀取中…':total+' 筆資料'}</span><button className="quiet" onClick={()=>refresh('')}>重新整理</button></div>
  <Notice error>{error}</Notice><Notice>{message}</Notice>
- {loading?<div className="empty" role="status">讀取資料中…</div>:!rows.length?<div className="empty"><span className="empty-symbol">{table==='office_cases'?'▤':'◎'}</span><h2>{query?'沒有符合的結果':'尚未建立'+def.label}</h2><p>{query?'試試其他名稱。':canWrite?'從新增第一筆資料開始，逐步整理你的事務所。':'目前沒有可檢視的資料。'}</p>{canWrite&&!query&&<button onClick={()=>setEditor({})}>新增{def.label}</button>}</div>:
- <div className="table-wrap"><table><thead><tr>{table==='office_cases'&&<th>案號</th>}<th>{def.label}名稱</th><th>{table==='office_cases'?'進度':'電話'}</th><th>{table==='office_cases'?'類型':'Email'}</th><th>更新日期</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>{rows.map(row=><tr key={row.id}>{table==='office_cases'&&<td className="case-number">{row.case_number}</td>}<td><button className="record-name" onClick={()=>setEditor(row)}>{row[def.name]}</button></td><td>{table==='office_cases'?<span className={'status '+row.status}>{statusLabels[row.status]}</span>:row.phone||'—'}</td><td>{table==='office_cases'?row.case_type:row.email||'—'}</td><td>{new Date(row.updated_at).toLocaleDateString('zh-TW')}</td><td>{table==='office_cases'&&<div className="case-actions"><button className="case-action" onClick={()=>onImportTranscript(row)}>謄本匯入</button><button className="case-action" onClick={()=>setTranscriptCase(row)}>地籍資料</button><button className="case-action" onClick={()=>setPartyCase(row)}>買賣當事人</button><button className="case-action" onClick={()=>{setDocumentCase(row);setDocumentDirty(false);setConfirmDocumentClose(false);}}>官方書表</button>{canDelete&&<button className="case-action is-danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>}</div>}{table!=='office_cases'&&canDelete&&<button className="text-button danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>}</td></tr>)}</tbody></table></div>}
+  {loading?<div className="empty" role="status">讀取資料中…</div>:!rows.length?<div className="empty"><span className="empty-symbol">{table==='office_cases'?'▤':'◎'}</span><h2>{query?'沒有符合的結果':'尚未建立'+def.label}</h2><p>{query?'試試其他名稱。':canWrite?'從新增第一筆資料開始，逐步整理你的事務所。':'目前沒有可檢視的資料。'}</p>{canWrite&&!query&&<button onClick={()=>setEditor({})}>新增{def.label}</button>}</div>:(
+   <div className="table-wrap"><table><thead><tr>
+    {table==='office_cases'&&<th>案號</th>}<th>{def.label}名稱</th>
+    {table==='office_cases'&&<th>案件種類／登記原因</th>}
+    <th>{table==='office_cases'?'進度':'電話'}</th><th>{table==='office_cases'?'類型':'Email'}</th><th>更新日期</th><th><span className="sr-only">操作</span></th>
+   </tr></thead><tbody>{rows.map(row=>(
+    <tr key={row.id}>
+     {table==='office_cases'&&<td className="case-number">{row.case_number}</td>}
+     <td><button className="record-name" onClick={()=>setEditor(row)}>{row[def.name]}</button></td>
+     {table==='office_cases'&&<td><div className="case-kind-reason">
+      <label>案件種類<select aria-label={row.title+'案件種類'} value={row.case_kind||''} disabled={!canWrite||savingCaseId===row.id} onChange={e=>updateCaseField(row,'case_kind',e.target.value)}>
+       <option value="">請選擇案件種類</option>{row.case_kind&&!caseTypes.includes(row.case_kind)&&<option value={row.case_kind}>{row.case_kind}（原案件種類）</option>}{caseTypes.map(value=><option key={value} value={value}>{value}</option>)}
+      </select></label>
+      <label>登記原因<select aria-label={row.title+'登記原因'} value={row.registration_reason||''} disabled={!canWrite||savingCaseId===row.id} onChange={e=>updateCaseField(row,'registration_reason',e.target.value)}>
+       <option value="">選擇登記原因</option>{row.registration_reason&&!registrationReasons.includes(row.registration_reason)&&<option value={row.registration_reason}>{row.registration_reason}（原登記原因）</option>}{registrationReasons.map(value=><option key={value} value={value}>{value}</option>)}
+      </select></label>
+      {savingCaseId===row.id&&<small role="status">儲存中…</small>}
+     </div></td>}
+     <td>{table==='office_cases'?<span className={'status '+row.status}>{statusLabels[row.status]}</span>:row.phone||'—'}</td>
+     <td>{table==='office_cases'?row.case_type:row.email||'—'}</td><td>{new Date(row.updated_at).toLocaleDateString('zh-TW')}</td>
+     <td>{table==='office_cases'?(<div className="case-actions"><button className="case-action" onClick={()=>onImportTranscript(row)}>謄本匯入</button><button className="case-action" onClick={()=>setTranscriptCase(row)}>地籍資料</button><button className="case-action" onClick={()=>setPartyCase(row)}>買賣當事人</button><button className="case-action" onClick={()=>{setDocumentCase(row);setDocumentDirty(false);setConfirmDocumentClose(false);}}>官方書表</button>{canDelete&&<button className="case-action is-danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>}</div>):(canDelete?<button className="text-button danger" onClick={()=>setDeleting(row)} aria-label={'刪除'+row[def.name]}>刪除</button>:null)}</td>
+    </tr>
+   ))}</tbody></table></div>
+  )}
  <div className="pagination"><button disabled={page===0||loading} onClick={()=>{setLoading(true);setPage(p=>p-1);}}>上一頁</button><span>第 {page+1} 頁</span><button disabled={(page+1)*20>=total||loading} onClick={()=>{setLoading(true);setPage(p=>p+1);}}>下一頁</button></div>
  {editor&&<RecordEditor table={table} row={editor} officeId={officeId} canWrite={canWrite} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);refresh('資料已儲存。');}}/>}
  {transcriptCase&&<Modal title={transcriptCase.case_number+"｜案件地籍資料"} onClose={()=>setTranscriptCase(null)}><Suspense fallback={<p>載入案件資料…</p>}><CaseTranscripts officeId={officeId} caseId={transcriptCase.id}/></Suspense></Modal>}
@@ -171,7 +205,7 @@ export function RelationField({kind,value,onChange,officeId,disabled,label,onCre
  return <div className="relation"><label>搜尋{label}<input disabled={disabled} value={search} onChange={e=>{setSearch(e.target.value);setLoading(true);}} placeholder="輸入名稱縮小選項（最多顯示 50 筆）"/></label><label>{label}<select value={value||''} onChange={e=>{setSelectedError(false);onChange(e.target.value);}} disabled={disabled}><option value="">未指定</option>{value&&!items.some(o=>o.id===value)&&<option value={value}>{selectedError?'已選資料無法讀取（保留原選擇）':'已選資料（讀取中）'}</option>}{items.map(item=><option key={item.id} value={item.id}>{item[name]}</option>)}</select></label>{loading?<small role="status">讀取選項中…</small>:!error&&!options.length&&<small>{search.trim()?'沒有符合搜尋的資料。':'尚未建立'+definitions[kind].label+'，可直接在此新增。'}</small>}<Notice error>{error}</Notice>{(error||selectedError)&&<button type="button" disabled={disabled} onClick={()=>{setLoading(true);setRetry(v=>v+1);}}>重新讀取選項</button>}{onCreate&&!disabled&&<button type="button" onClick={()=>onCreate(search.trim())}>＋ 新增{definitions[kind].label}</button>}</div>;
 }
 export function RecordEditor({table,row,officeId,canWrite,onClose,onSaved,quick=false}) {
- const def=definitions[table];const [form,setForm]=useState({...row,birth_date:formatBirthDate(row.birth_date),status:row.status||'draft',case_type:row.case_type||''});
+ const def=definitions[table];const [form,setForm]=useState({...row,birth_date:formatBirthDate(row.birth_date),status:row.status||'draft',case_kind:row.case_kind||'',case_type:row.case_type||'手動新增'});
  const [creating,setCreating]=useState(null),[relationRevision,setRelationRevision]=useState(0),[message,setMessage]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');const pending=useRef(false);
  const update=(key,value)=>setForm(f=>({...f,[key]:value}));
@@ -179,7 +213,7 @@ export function RecordEditor({table,row,officeId,canWrite,onClose,onSaved,quick=
   e.preventDefault();if(!canWrite||pending.current)return;pending.current=true;setBusy(true);setError('');
   try {
    if(table==='office_cases'&&form.closed_on&&(!form.opened_on||form.closed_on<form.opened_on)){setError('結案日期不得早於開案日期，且須填寫開案日期。');return;}
-   let values; try{values=payloadFor(table,form);}catch(e){setError(e.message);return;}
+   let values; try{values=payloadFor(table,form);if(table==='office_cases')values.case_type=form.case_type||'手動新增';}catch(e){setError(e.message);return;}
    const request=row.id?db.from(table).update(values).eq('id',row.id).eq('office_id',officeId).eq('updated_at',row.updated_at):db.from(table).insert({...values,office_id:officeId});
    const {data,error}=await request.select('id');
    if(error)setError(errorText(error));
@@ -188,7 +222,7 @@ export function RecordEditor({table,row,officeId,canWrite,onClose,onSaved,quick=
   }catch{setError('儲存未完成，請稍後重試。');}finally{pending.current=false;setBusy(false);}
  }
  return <><Modal title={(row.id?(canWrite?'編輯':'檢視'):'新增')+def.label} onClose={onClose} busy={busy||!!creating}><form onSubmit={submit}><fieldset disabled={busy||!canWrite||!!creating} className="form-grid">
- {def.fields.map(([key,label,type,max,required])=>['contacts','organizations'].includes(type)?<RelationField key={key} kind={type} value={form[key]} onChange={v=>update(key,v)} officeId={officeId} disabled={busy||!canWrite} label={label} revision={relationRevision} onCreate={canWrite?name=>setCreating({key,table:type,row:{[definitions[type].name]:name}}):null}/>:<label key={key}>{label}{required&&' *'}{type==='caseType'?<select required value={form[key]} onChange={e=>update(key,e.target.value)}><option value="">請選擇案件類型</option>{form[key]&&!caseTypes.includes(form[key])&&<option value={form[key]}>{form[key]}（原案件類型）</option>}{caseTypes.map(v=><option key={v} value={v}>{v}</option>)}</select>:type==='status'?<select value={form[key]||'draft'} onChange={e=>update(key,e.target.value)}>{Object.entries(statusLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>:<input type={type} value={form[key]||''} required={required} maxLength={max} onChange={e=>update(key,e.target.value)}/>}</label>)}</fieldset>
+ {def.fields.map(([key,label,type,max,required])=>['contacts','organizations'].includes(type)?<RelationField key={key} kind={type} value={form[key]} onChange={v=>update(key,v)} officeId={officeId} disabled={busy||!canWrite} label={label} revision={relationRevision} onCreate={canWrite?name=>setCreating({key,table:type,row:{[definitions[type].name]:name}}):null}/>:<label key={key}>{label}{required&&' *'}{type==='caseType'?<select required value={form[key]} onChange={e=>update(key,e.target.value)}><option value="">請選擇案件種類</option>{form[key]&&!caseTypes.includes(form[key])&&<option value={form[key]}>{form[key]}（原案件種類）</option>}{caseTypes.map(v=><option key={v} value={v}>{v}</option>)}</select>:type==='registrationReason'?<select value={form[key]||''} onChange={e=>update(key,e.target.value)}><option value="">尚未選擇</option>{form[key]&&!registrationReasons.includes(form[key])&&<option value={form[key]}>{form[key]}（原登記原因）</option>}{registrationReasons.map(v=><option key={v} value={v}>{v}</option>)}</select>:type==='status'?<select value={form[key]||'draft'} onChange={e=>update(key,e.target.value)}>{Object.entries(statusLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select>:<input type={type} value={form[key]||''} required={required} maxLength={max} onChange={e=>update(key,e.target.value)}/>}</label>)}</fieldset>
  {table==='contacts'&&<p className="form-note">出生年月日請填民國年／月／日，例如 80/05/21；未知可留白。身分證加密儲存尚未啟用，請勿將字號填入其他欄位。</p>}
  {quick&&<p className="form-note">儲存後會加入事務所名冊並自動選取。即使稍後取消案件，這筆名冊資料仍會保留。</p>}
  {table==='office_cases'&&<p className="form-note">主要聯絡人是聯繫窗口，不等同買受人或出賣人。</p>}

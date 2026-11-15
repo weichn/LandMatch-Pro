@@ -63,6 +63,8 @@ create table public.office_cases (
  case_number text not null check (length(btrim(case_number)) between 1 and 100),
  title text not null check (length(btrim(title)) between 1 and 300),
  case_type text not null default 'other' check (length(btrim(case_type)) between 1 and 100),
+ case_kind text check (case_kind is null or case_kind in ('買賣','贈與','繼承','抵押權設定','其他')),
+ registration_reason text check (registration_reason is null or registration_reason in ('第一次登記','買賣','贈與','繼承','分割繼承','拍賣','共有物分割','設定','法定','清償','拋棄','混同','判決塗銷','權利價值變更','權利內容等變更','分割','合併','地目變更')),
  status text not null default 'draft' check (status in ('draft','active','on_hold','completed','cancelled')),
  primary_contact_id uuid,
  organization_id uuid,
