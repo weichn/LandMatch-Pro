@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {officialFormsCatalog} from './officialFormsCatalog';
+import {taxForms,taxFormSources} from './taxForms';
 import RegistrationPreview,{downloadPdf,openPrintablePdf} from './RegistrationPreview';
 import {applyPrintLayout,paperLayouts} from './printLayout';
 import './official-forms-library.css';
@@ -16,14 +17,15 @@ function caseTemplateFor(form){
  return '';
 }
 const variantNames={blank:'空白書表',example:'填寫範例',instructions:'填寫說明'};
+const allCatalogForms=[...officialFormsCatalog.forms,...taxForms];
 const reasonTerms={
  '第一次登記':['第一次登記','建物測量','土地登記申請書'],
- '買賣':['買賣','土地登記申請書'],
- '贈與':['贈與','土地登記申請書'],
- '繼承':['繼承','遺產','系統表','土地登記申請書'],
- '分割繼承':['分割繼承','繼承','遺產','系統表','土地登記申請書'],
+ '買賣':['買賣','契稅申報書','土地增值稅','土地登記申請書'],
+ '贈與':['贈與稅申報書','贈與契約書','契稅申報書','土地增值稅','贈與','土地登記申請書'],
+ '繼承':['遺產稅申報書','遺產項目','剩餘財產差額','證明書副本','繼承','遺產','系統表','土地登記申請書'],
+ '分割繼承':['遺產稅申報書','遺產項目','繼承','遺產','系統表','土地登記申請書'],
  '拍賣':['拍賣','法院','土地登記申請書'],
- '共有物分割':['共有物分割','所有權分割','土地登記申請書'],
+ '共有物分割':['共有物分割','土地增值稅','契稅申報書','所有權分割','土地登記申請書'],
  '設定':['抵押權設定','設定契約書','土地登記申請書'],
  '法定':['法定','土地登記申請書'],
  '清償':['清償','抵押權','塗銷','土地登記申請書'],
@@ -32,7 +34,7 @@ const reasonTerms={
  '判決塗銷':['判決塗銷','判決','塗銷','土地登記申請書'],
  '權利價值變更':['權利價值變更','抵押權移轉變更','土地登記申請書'],
  '權利內容等變更':['權利內容等變更','內容變更','抵押權移轉變更','土地登記申請書'],
- '分割':['共有物分割','所有權分割','分割','土地登記申請書'],
+ '分割':['共有物分割','土地增值稅','契稅申報書','所有權分割','分割','土地登記申請書'],
  '合併':['合併','土地複丈','土地鑑界','土地登記申請書'],
  '地目變更':['地目變更','標示變更','土地複丈','土地登記申請書'],
 };
@@ -45,8 +47,8 @@ export default function OfficialFormsLibrary({onUseTemplate,initialFormId='',reg
  const [query,setQuery]=useState(''),[category,setCategory]=useState(''),[variant,setVariant]=useState('blank');
  const [selected,setSelected]=useState(null),[bytes,setBytes]=useState(null),[layout,setLayout]=useState('original'),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const revision=useRef(0);
- const categories=[...new Set(officialFormsCatalog.forms.map(f=>f.category))];
- const rows=useMemo(()=>officialFormsCatalog.forms.filter(f=>(!category||f.category===category)&&(!variant||f.variant===variant)&&(!query||[f.label,f.context,f.provider].join(' ').includes(query.trim()))).sort((a,b)=>relevance(b,registrationReason)-relevance(a,registrationReason)),[query,category,variant,registrationReason]);
+ const categories=[...new Set(allCatalogForms.map(f=>f.category))];
+ const rows=useMemo(()=>allCatalogForms.filter(f=>(!category||f.category===category)&&(!variant||f.variant===variant)&&(!query||[f.label,f.context,f.provider].join(' ').includes(query.trim()))).sort((a,b)=>relevance(b,registrationReason)-relevance(a,registrationReason)),[query,category,variant,registrationReason]);
  const recommendedRows=useMemo(()=>registrationReason?rows.filter(form=>relevance(form,registrationReason)>0).slice(0,6):[],[rows,registrationReason]);
  const recommendedIds=new Set(recommendedRows.map(form=>form.id));
  const renderForms=forms=>forms.map(form=><article className="forms-library-item" key={form.id}>
@@ -74,15 +76,15 @@ export default function OfficialFormsLibrary({onUseTemplate,initialFormId='',reg
  }
  useEffect(()=>{
   if(!initialFormId)return;
-  const form=officialFormsCatalog.forms.find(item=>item.id===initialFormId);
+  const form=allCatalogForms.find(item=>item.id===initialFormId);
   if(!form)return;
   setQuery(form.label);setCategory(form.category);setVariant(form.variant);
   void preview(form);
  },[initialFormId]);
  return <section className="official-forms-library">
   <h3>官方書表庫</h3>
-  <p>完整收錄下列官方目錄的書表，涵蓋登記、贈與、繼承、分割、信託、測量、謄本與其他申請；不同機關版本分開列示。</p>
-  <div className="document-source">{officialFormsCatalog.sources.map(source=><a key={source.id} href={source.url} target="_blank" rel="noreferrer">{source.provider}官方目錄 ↗</a>)}</div>
+  <p>收錄地政登記及相關國稅、地方稅官方書表，並依案件登記原因優先顯示常用表格。稅務表格連結至官方來源；地方稅表請依標的所在地稅捐機關版本使用。</p>
+  <div className="document-source">{[...officialFormsCatalog.sources,...taxFormSources].map(source=><a key={source.id} href={source.url} target="_blank" rel="noreferrer">{source.provider}官方目錄 ↗</a>)}</div>
   <div className="forms-library-filters">
    <label>搜尋書表<input value={query} onChange={e=>setQuery(e.target.value)} placeholder="例如：贈與、繼承、信託、測量"/></label>
    <label>類別<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">全部類別</option>{categories.map(c=><option key={c}>{c}</option>)}</select></label>
