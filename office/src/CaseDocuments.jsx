@@ -3,6 +3,7 @@ import {db} from './client';
 import {formatBirthDate} from './birthDate';
 import {initialRegistrationData} from './registrationData';
 import {addressLabels,createRegistrationPdf,documentTypes,missingFields,officialCatalog,splitAddress} from './registrationPdf';
+import {officialFormsCatalog} from './officialFormsCatalog';
 import RegistrationPreview,{downloadPdf,openPrintablePdf} from './RegistrationPreview';
 import {applyPrintLayout,paperLayouts} from './printLayout';
 import OfficialFormsLibrary from './OfficialFormsLibrary';
@@ -10,13 +11,14 @@ import './case-documents.css';
 
 const roleNames={buyer:'買受人',seller:'出賣人',creditor:'抵押權人',mortgagor:'設定義務人',debtor:'債務人',donor:'贈與人',donee:'受贈人',decedent:'被繼承人',heir:'繼承人'};
 const fieldNames={city:'縣市',district:'鄉鎮市區',section:'段',subsection:'小段',number:'地號／建號',area:'總面積（㎡）',share:'本次移轉／設定持分',land:'建物坐落地號',floor:'層次',floorArea:'各層面積（可換行對應層次）',annex:'附屬建物用途',annexArea:'附屬建物面積（㎡）',limitedAmount:'本標的限定擔保金額',foreclosure:'本標的流抵約定',allocation:'遺產權利人及繼承持分（請依協議填寫）'};
+const additionalOfficialForms=[...new Map(officialFormsCatalog.forms.filter(form=>form.variant==='blank'&&form.category!=='其他').map(form=>[[form.provider,form.label,form.localFile||form.pdfUrl||form.odtUrl||form.docUrl||form.sourceUrl].join('|'),form])).values()];
 function Input({label,value,onChange,multiline=false,...props}){return <label>{label}{multiline?<textarea value={value||''} onChange={e=>onChange(e.target.value)} maxLength={1500} rows={3} {...props}/>:<input value={value||''} onChange={e=>onChange(e.target.value)} maxLength={200} {...props}/>}</label>;}
 function Address({value,parts,onChange}){
  const values=parts||splitAddress(value);
  return <details className="document-address"><summary>核對住所分欄：{values.join('')||'尚未填寫'}</summary><div className="document-grid">{addressLabels.map((label,i)=><Input key={label} label={label} value={values[i]} onChange={v=>{const next=[...values];next[i]=v;onChange(next);}}/>)}</div></details>;
 }
 export default function CaseDocuments({officeId,caseRow,office,onDirtyChange}){
- const [loading,setLoading]=useState(true),[data,setData]=useState(null),[contacts,setContacts]=useState([]),[error,setError]=useState(''),[type,setType]=useState('application'),[layout,setLayout]=useState('a3'),[mode,setMode]=useState('case');
+ const [loading,setLoading]=useState(true),[data,setData]=useState(null),[contacts,setContacts]=useState([]),[error,setError]=useState(''),[type,setType]=useState('application'),[layout,setLayout]=useState('a3'),[mode,setMode]=useState('case'),[selectedOfficialFormId,setSelectedOfficialFormId]=useState('');
  const [busy,setBusy]=useState(false),[result,setResult]=useState(null),[reviewed,setReviewed]=useState(false),[contactId,setContactId]=useState(''),[newRole,setNewRole]=useState('buyer'),[retry,setRetry]=useState(0);
  const pending=useRef(false),live=useRef(true),version=useRef(0);
  const [sourceSnapshot]=useState(()=>({caseRow,office}));
@@ -51,12 +53,13 @@ export default function CaseDocuments({officeId,caseRow,office,onDirtyChange}){
  if(!data)return <><p className="notice error" role="alert">{error}</p><button onClick={()=>{setLoading(true);setError('');setRetry(v=>v+1);}}>重新讀取</button></>;
  const missing=missingFields(data,type),isMortgage=type==='mortgage'||(type==='application'&&data.meta.reason==='抵押權設定'),isSale=type.includes('sale'),isGift=type==='gift',isInheritance=type.startsWith('inheritance'),m=data.meta;
  const selectedDef=documentTypes.find(d=>d.id===type);
- function useTemplate(nextType,context){setMode('case');setType(nextType);setResult(null);setReviewed(false);setError('');version.current++;if(nextType==='application'){const reason=/分割繼承/.test(context)?'分割繼承':/繼承/.test(context)?'繼承':/贈與/.test(context)?'贈與':/抵押權設定/.test(context)?'抵押權設定':'買賣';meta('reason',reason);}}
- return <section className="case-documents"><div className="document-tabs"><button type="button" aria-pressed={mode==='case'} onClick={()=>setMode('case')}>案件資料套印</button><button type="button" aria-pressed={mode==='library'} onClick={()=>setMode('library')}>全部官方書表</button></div>{mode==='library'?<OfficialFormsLibrary onUseTemplate={useTemplate}/>:<>
+ function useTemplate(nextType,context){setMode('case');setSelectedOfficialFormId('');setType(nextType);setResult(null);setReviewed(false);setError('');version.current++;if(nextType==='application'){const reason=/分割繼承/.test(context)?'分割繼承':/繼承/.test(context)?'繼承':/贈與/.test(context)?'贈與':/抵押權設定/.test(context)?'抵押權設定':'買賣';meta('reason',reason);}}
+ function changeDocumentSelection(value){if(value.startsWith('official:')){setSelectedOfficialFormId(value.slice('official:'.length));setMode('library');setResult(null);setReviewed(false);setError('');return;}setSelectedOfficialFormId('');setType(value);setResult(null);setReviewed(false);setError('');version.current++;}
+ return <section className="case-documents"><div className="document-tabs"><button type="button" aria-pressed={mode==='case'} onClick={()=>{setMode('case');setSelectedOfficialFormId('');}}>案件資料套印</button><button type="button" aria-pressed={mode==='library'} onClick={()=>setMode('library')}>全部官方書表</button></div>{mode==='library'?<OfficialFormsLibrary initialFormId={selectedOfficialFormId} onUseTemplate={useTemplate}/>:<>
   <p>官方原版書表套印。先核對標的與當事人，再補填本次登記條件，最後產生 PDF。</p>
   <p className="form-note">本視窗補填內容暫存於瀏覽器記憶體，關閉後不保留；請下載 PDF 保存。身分字號不寫入案件名冊。</p>
   <div className="document-source"><a href={officialCatalog} target="_blank" rel="noreferrer">官方書表來源與填寫說明 ↗</a><a href={'/forms/'+(type==='application'?'application.pdf':selectedDef.file)} target="_blank" rel="noreferrer">查看官方空白原檔 ↗</a></div>
-  <label>選擇文件<select disabled={busy} value={type} onChange={e=>{setType(e.target.value);setResult(null);setReviewed(false);setError('');version.current++;}}>{documentTypes.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</select></label>
+  <label>選擇文件<select disabled={busy} value={selectedOfficialFormId?'official:'+selectedOfficialFormId:type} onChange={e=>changeDocumentSelection(e.target.value)}><optgroup label="案件資料套印（可帶入本案資料）">{documentTypes.map(d=><option key={d.id} value={d.id}>{d.label}</option>)}</optgroup>{['登記','測量','地籍資料申請','撤回與規費'].map(category=>{const forms=additionalOfficialForms.filter(form=>form.category===category);return forms.length?<optgroup key={category} label={'官方空白書表｜'+category+'（'+forms.length+'項）'}>{forms.map(form=><option key={form.id} value={'official:'+form.id}>{form.label}（{form.provider.replace(/地政事務所/g,'地所')}｜{form.context}）</option>)}</optgroup>:null;})}</select></label><p className="form-note">案件資料套印會帶入本案欄位；官方空白書表則開啟機關原表下載或列印，不會自動填入本案資料。</p>
   <label>列印版型<select disabled={busy} value={layout} onChange={e=>{setLayout(e.target.value);setResult(null);setError('');version.current++;}}>{paperLayouts.map(l=><option key={l.id} value={l.id}>{l.label}</option>)}</select></label><p className="form-note">A3 版會把相鄰兩頁橫式表格完整上下合併；原本直式書表使用單張 A3，內容不裁切。列印時請選 A3 直式；原版分頁仍可選擇。</p>
   {data.sourceWarnings.length>0&&<div className="notice" role="status">{data.sourceWarnings.map((w,i)=><p key={i}>{w}</p>)}</div>}
   <fieldset disabled={busy} className="document-editor">

@@ -1,4 +1,4 @@
-import {useMemo,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {officialFormsCatalog} from './officialFormsCatalog';
 import RegistrationPreview,{downloadPdf,openPrintablePdf} from './RegistrationPreview';
 import {applyPrintLayout,paperLayouts} from './printLayout';
@@ -16,7 +16,7 @@ function caseTemplateFor(form){
  return '';
 }
 const variantNames={blank:'空白書表',example:'填寫範例',instructions:'填寫說明'};
-export default function OfficialFormsLibrary({onUseTemplate}){
+export default function OfficialFormsLibrary({onUseTemplate,initialFormId=''}){
  const [query,setQuery]=useState(''),[category,setCategory]=useState(''),[variant,setVariant]=useState('blank');
  const [selected,setSelected]=useState(null),[bytes,setBytes]=useState(null),[layout,setLayout]=useState('original'),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const revision=useRef(0);
@@ -33,6 +33,13 @@ export default function OfficialFormsLibrary({onUseTemplate}){
   }catch(e){if(current===revision.current)setError(e.message||'預覽未完成，請使用官方原檔。');}
   finally{if(current===revision.current)setBusy(false);}
  }
+ useEffect(()=>{
+  if(!initialFormId)return;
+  const form=officialFormsCatalog.forms.find(item=>item.id===initialFormId);
+  if(!form)return;
+  setQuery(form.label);setCategory(form.category);setVariant(form.variant);
+  void preview(form);
+ },[initialFormId]);
  return <section className="official-forms-library">
   <h3>官方書表庫</h3>
   <p>完整收錄下列官方目錄的書表，涵蓋登記、贈與、繼承、分割、信託、測量、謄本與其他申請；不同機關版本分開列示。</p>
@@ -58,7 +65,7 @@ export default function OfficialFormsLibrary({onUseTemplate}){
   {!rows.length&&<p role="status">沒有符合的書表，請改用其他關鍵字或切換類別。</p>}
   {selected&&<section className="forms-library-preview">
    <h3>{selected.label}｜{variantNames[selected.variant]}</h3>
-   <p className="form-note">這是官方{variantNames[selected.variant]}，尚未填入本案資料。印製、附件及簽章請依受理機關要求核對。</p>
+   <p className="form-note">{initialFormId?'這是從「選擇文件」開啟的官方空白表，':'這是官方'+variantNames[selected.variant]+'，'}尚未填入本案資料。印製、附件及簽章請依受理機關要求核對。</p>
    <label>書表庫列印版型<select disabled={busy} value={layout} onChange={e=>{setLayout(e.target.value);void preview(selected,e.target.value);}}>{paperLayouts.map(l=><option key={l.id} value={l.id}>{l.label}</option>)}</select></label>
    <div className="document-inline-actions">{bytes&&<><button onClick={()=>downloadPdf(bytes,`${selected.label}-${layout==='a3'?'A3直式':'原版'}.pdf`).catch(e=>setError(e.message))}>下載書表 PDF</button><button onClick={()=>openPrintablePdf(bytes).catch(e=>setError(e.message))}>開啟書表列印 PDF</button></>}</div>
    <RegistrationPreview bytes={bytes} busy={busy} error={error} title={selected.label+'｜'+variantNames[selected.variant]}/>
