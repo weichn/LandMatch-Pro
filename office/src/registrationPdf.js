@@ -12,6 +12,10 @@ export const documentTypes = [
  {id:'gift',label:'土地、建物贈與移轉契約書',file:'gift.pdf'},
  {id:'inheritance-tree',label:'繼承系統表',file:'inheritance-tree.pdf'},
  {id:'inheritance-partition',label:'遺產分割協議書',file:'inheritance-partition.pdf'},
+ {id:'tax-gift',label:'贈與稅申報書（國稅）',file:'tax/gift-tax-return.pdf'},
+ {id:'tax-estate',label:'遺產稅申報書（國稅）',file:'tax/estate-tax-return.pdf'},
+ {id:'tax-deed',label:'契稅申報書（地方稅｜新北市版）',file:'tax/deed-tax.pdf'},
+ {id:'tax-land-value',label:'土地增值稅申報書（地方稅｜新北市版）',file:'tax/land-value-tax.pdf'},
 ];
 export const officialCatalog = 'https://landeasy.hccg.gov.tw/content/?mode=data&parent_id=273';
 export const addressLabels=['縣市','鄉鎮市區','村里','鄰','街路','段','巷','弄','號','樓'];
@@ -32,8 +36,11 @@ export function splitAddress(value='') {
 }
 const str=v=>String(v??'').trim();
 function validBirthDate(value){const raw=str(value).normalize('NFKC');if(!/^(?:民前|民國)?\s*[1-9]\d{0,3}\s*[/年.-]/.test(raw))return false;try{return !!parseBirthDate(raw);}catch{return false;}}
-function chosenProperties(data,type){return data.properties.filter(p=>p.included!==false&&(type!=='land-sale'||p.kind==='土地')&&(type!=='building-sale'||p.kind==='建物'));}
+function chosenProperties(data,type){return data.properties.filter(p=>p.included!==false&&(type!=='land-sale'||p.kind==='土地')&&(type!=='building-sale'||p.kind==='建物')&&(type!=='tax-land-value'||p.kind==='土地')&&(type!=='tax-deed'||p.kind==='建物'));}
 function roleGroup(data,type){
+ if(type==='tax-gift')return ['donor','donee'];
+ if(type==='tax-estate')return ['decedent','heir'];
+ if(type==='tax-deed'||type==='tax-land-value')return ['buyer','seller'];
  if(type==='mortgage'||(type==='application'&&data.meta.reason==='抵押權設定'))return ['creditor','mortgagor','debtor'];
  if(type==='gift'||(type==='application'&&data.meta.reason==='贈與'))return ['donee','donor'];
  if(type.startsWith('inheritance'))return ['heir','decedent'];
@@ -43,8 +50,8 @@ function roleGroup(data,type){
 function relevantParties(data,type){return data.parties.filter(p=>p.included!==false&&roleGroup(data,type).includes(p.role)).map(p=>p.personType==='legal'?{...p,birthDate:''}:p);}
 export function missingFields(data,type) {
  const missing=[],m=data.meta,ps=chosenProperties(data,type),parties=relevantParties(data,type);
- const tree=type==='inheritance-tree',inheritance=type.startsWith('inheritance'),transfer=type.includes('sale')||type==='gift';
- if(!tree&&!ps.length)missing.push('至少一筆登記標的');
+ const tree=type==='inheritance-tree',inheritance=type.startsWith('inheritance')||type==='tax-estate',transfer=type.includes('sale')||type==='gift'||type==='tax-gift'||type==='tax-deed'||type==='tax-land-value';
+ if(!tree&&!ps.length&&type!=='tax-estate')missing.push('至少一筆登記標的');
  if(!tree)ps.forEach((p,i)=>{for(const [k,l] of [['city','縣市'],['district','鄉鎮市區'],['section','段'],['number',p.kind==='土地'?'地號':'建號'],['area','面積'],['share',type==='mortgage'?'設定持分':'移轉持分']])if(!str(p[k]))missing.push(`標的 ${i+1} ${l}`);if(type==='inheritance-partition'&&!str(p.allocation))missing.push(`標的 ${i+1} 遺產權利人及繼承持分`);});
  if(type!=='application'&&!tree)ps.filter(p=>p.kind==='建物').forEach((p,i)=>{
   for(const [k,l] of [['address','建物門牌'],...(type!=='inheritance-partition'?[['land','基地坐落地號']]:[]),...(transfer?[['floor','層次'],['floorArea','各層面積']]:[])])if(!str(p[k]))missing.push(`建物 ${i+1} ${l}（無此項請明填「無」）`);
@@ -59,8 +66,16 @@ export function missingFields(data,type) {
   if(type==='application'){if(!str(m.landOffice)||!str(m.receivingCity))missing.push('受理縣市及地政事務所');if(!validRocDate(m.causeDate))missing.push('有效的原因發生日期（民國年/月/日）');if(!str(m.attachments))missing.push('附繳證件');if(str(m.agentName)){if(!str(m.agentId)||!str(m.agentAddress))missing.push('代理人統一編號及住所');if(!validBirthDate(m.agentBirthDate))missing.push('代理人有效出生年月日');}}
  else {if(!validRocDate(m.contractDate))missing.push('有效的立約日期（民國年/月/日）');}
  if(inheritance&&!validRocDate(m.deathDate))missing.push('有效的被繼承人死亡日期（民國年/月/日）');
- if(type==='gift'&&!str(m.giftValue))missing.push('贈與權利價值');
+ if((type==='gift'||type==='tax-gift')&&!str(m.giftValue))missing.push('贈與權利價值');
  if(type.includes('sale')){if(type==='sale'&&!str(m.totalPrice))missing.push('買賣價款總金額');if(type==='land-sale'&&!str(m.landPrice))missing.push('土地價款');if(type==='building-sale'&&!str(m.buildingPrice))missing.push('建物價款');}
+ if(type==='tax-gift'){
+  for(const p of parties)for(const [k,label] of [['idNumber','統一編號／身分字號'],['address','住所']])if(!str(p[k]))missing.push(`${p.role==='donor'?'贈與人':'受贈人'} ${p.name||''} ${label}`);
+  ps.filter(p=>p.kind==='土地').forEach((p,i)=>{if(!str(p.price))missing.push(`土地 ${i+1} 贈與價額`);});
+ }
+ if(type==='tax-estate')for(const p of parties)if(p.role==='decedent'||p.role==='heir')for(const [k,label] of [['idNumber','統一編號／身分字號'],['address','住所']])if(!str(p[k]))missing.push(`${p.name||'繼承當事人'} ${label}`);
+ if(type==='tax-deed'&&!str(m.taxBuildingNumber))missing.push('房屋稅籍編號（契稅申報需要）');
+ if(type==='tax-deed'&&!str(m.taxTransferPrice))missing.push('房屋移轉價格');
+ if(type==='tax-land-value')ps.filter(p=>p.kind==='土地').forEach((p,i)=>{if(!str(p.price))missing.push(`土地 ${i+1} 申報移轉現值`);});
  if(type==='mortgage'){for(const [k,l] of [['mortgageRight','提供擔保權利種類'],['mortgageAmount','擔保債權總金額'],['mortgageScope','擔保債權種類及範圍'],['repayment','債務清償日期'],['interest','利息'],['lateInterest','遲延利息'],['penalty','違約金']])if(!str(m[k]))missing.push(l);if(m.mortgageKind==='最高限額'&&!str(m.mortgageConfirmed))missing.push('擔保債權確定期日');}
  return missing;
 }
@@ -75,7 +90,11 @@ export async function createRegistrationPdf(data,type,{loadAsset,reviewed=false}
  const source=await PDFDocument.load(template),font=await pdf.embedFont(fontBytes,{subset:false});
  const incomplete=missingFields(data,type),draft=!reviewed||incomplete.length>0;
  const props=chosenProperties(data,type),parties=relevantParties(data,type),m=data.meta;
- if(type==='inheritance-tree'){
+ if(type==='tax-gift'||type==='tax-estate'||type==='tax-deed'||type==='tax-land-value'){
+  // Government tax returns contain case-specific declarations and many data
+  // that are not held by the office case. Prefill only the matched fields and
+  // keep the original official form pages intact for manual completion.
+ }else if(type==='inheritance-tree'){
   if(parties.filter(a=>a.role==='decedent').length>1||parties.filter(a=>a.role==='heir').length>7)throw new Error('這份繼承系統表僅能列一位被繼承人及七位已明確指定關係的繼承人，請使用符合親屬關係的官方書表或另備續頁。');
  }else if(type==='inheritance-partition'){
   if(props.filter(a=>a.kind==='土地').length>5||props.filter(a=>a.kind==='建物').length>3||parties.filter(a=>a.role==='decedent').length>1||parties.filter(a=>a.role==='heir').length>4)throw new Error('這份協議書最多列 5 筆土地、3 筆建物及 4 位繼承人，請分批或另備續頁。');
@@ -101,7 +120,43 @@ export async function createRegistrationPdf(data,type,{loadAsset,reviewed=false}
  function address(page,party,xs,y,h){const parts=party.addressParts||splitAddress(party.address);xs.slice(0,-1).forEach((x,i)=>box(page,parts[i],x,y,xs[i+1]-x,h,{size:13,label:addressLabels[i]}));}
  function contractDate(page,y,xs){dateParts(m.contractDate).forEach((d,i)=>box(page,d,xs[i],y,90,32,{size:17,label:'立約日期'}));}
  const p=pages[0],q=pages[1];
- if(type.includes('sale')){
+ if(type.startsWith('tax-')){
+  const first=pages[0],m=data.meta||{};
+  const drawAt=(page,value,x,y,w,h,{size=12}={})=>{
+   const s=str(value);if(!s)return;
+   const sx=page.getWidth()/1400,sy=page.getHeight()/990;
+   const fontSize=size*sx,limit=w*sx-4*sx;
+   let t=s;while(t.length>1&&font.widthOfTextAtSize(t,fontSize)>limit)t=t.slice(0,-1);
+   page.drawText(t,{font,size:fontSize,color:rgb(0,0,0),x:x*sx+2*sx,y:page.getHeight()-(y*sy+h*sy/2)-fontSize*.32});
+  };
+  const fmtDate=v=>{const m=str(v).match(/^(\d{1,3})[/年.-](\d{1,2})[/月.-](\d{1,2})日?$/);return m?m.slice(1).join(' / '):str(v);};
+  const donors=parties.filter(a=>a.role==='donor'),donees=parties.filter(a=>a.role==='donee'),heirs=parties.filter(a=>a.role==='heir'),decedent=parties.find(a=>a.role==='decedent');
+  if(type==='tax-gift'){
+   // Ministry of Finance 9-page A3 landscape blank. Coordinates are measured
+   // against its first page rendering (936 x 663 px), scaled to PDF points.
+   const page=first,px=page.getWidth()/936,py=page.getHeight()/663;
+   const put=(value,x,y,w,h,size=12)=>{if(!str(value))return;let t=str(value);while(t.length>1&&font.widthOfTextAtSize(t,size*px)>w*px-3*px)t=t.slice(0,-1);page.drawText(t,{font,size:size*px,color:rgb(0,0,0),x:x*px+2*px,y:page.getHeight()-(y+h/2)*py-size*px*.35});};
+   put(fmtDate(m.contractDate),748,42,170,22,11);put(donors[0]?.name,89,95,185,24,11);put(donors[0]?.idNumber,360,95,189,24,10);put(donors[0]?.address,74,117,470,21,10);
+   donees.slice(0,5).forEach((p,i)=>{const y=211+i*27;put(p.name,125,y,140,24,10);put(p.birthDate,270,y,65,24,9);put(p.idNumber,337,y,174,24,9);put(p.address,513,y,235,24,9);});
+   props.filter(p=>p.kind==='土地'&&p.included!==false).slice(0,5).forEach((p,i)=>{const y=314+i*25;put(`${p.city}${p.district}${p.section}${p.subsection}${p.number}`,45,y,245,23,9);put(p.area,290,y,62,23,9);put(p.share,354,y,66,23,9);put(p.price,423,y,95,23,9);});
+  }else if(type==='tax-estate'){
+   // Only the decedent and heir identity fields are prefilled; estate assets,
+   // deductions, valuation and tax calculations must be completed from source records.
+   const page=first,px=page.getWidth()/936,py=page.getHeight()/1323;
+   const put=(value,x,y,w,h,size=11)=>{if(!str(value))return;let t=str(value);while(t.length>1&&font.widthOfTextAtSize(t,size*px)>w*px-3*px)t=t.slice(0,-1);page.drawText(t,{font,size:size*px,color:rgb(0,0,0),x:x*px+2*px,y:page.getHeight()-(y+h/2)*py-size*px*.35});};
+   put(decedent?.name,221,206,225,31,11);put(decedent?.idNumber,507,206,156,30,10);put(decedent?.address,230,179,535,24,9);put(fmtDate(m.deathDate),373,67,120,25,10);
+   heirs.slice(0,5).forEach((p,i)=>{const y=315+i*32;put(p.name,168,y,180,28,10);put(p.idNumber,348,y,155,28,9);put(p.address,504,y,245,28,8);});
+  }else if(type==='tax-deed'){
+   const page=first,px=page.getWidth()/936,py=page.getHeight()/1323,put=(value,x,y,w,h,size=11)=>{if(!str(value))return;let t=str(value);while(t.length>1&&font.widthOfTextAtSize(t,size*px)>w*px-3*px)t=t.slice(0,-1);page.drawText(t,{font,size:size*px,color:rgb(0,0,0),x:x*px+2*px,y:page.getHeight()-(y+h/2)*py-size*px*.35});};
+   const land=props.find(p=>p.kind==='建物'&&p.included!==false)||{};const seller=parties.find(p=>p.role==='seller'),buyer=parties.find(p=>p.role==='buyer');
+   put(land.number,273,69,114,23,10);put(`${land.city||''}${land.district||''}${land.address||''}`,430,69,420,23,9);put(fmtDate(m.contractDate),339,100,150,25,10);put(fmtDate(m.applicationDate),747,100,145,25,10);put(m.taxTransferPrice||m.buildingPrice||m.totalPrice,211,132,125,23,10);put(seller?.name,200,226,128,25,9);put(seller?.idNumber,330,226,105,25,8);put(seller?.address,513,226,257,25,8);put(buyer?.name,201,252,128,25,9);put(buyer?.idNumber,330,252,105,25,8);put(buyer?.address,513,252,257,25,8);
+  }else{
+   const page=first,px=page.getWidth()/936,py=page.getHeight()/663,put=(value,x,y,w,h,size=10)=>{if(!str(value))return;let t=str(value);while(t.length>1&&font.widthOfTextAtSize(t,size*px)>w*px-3*px)t=t.slice(0,-1);page.drawText(t,{font,size:size*px,color:rgb(0,0,0),x:x*px+2*px,y:page.getHeight()-(y+h/2)*py-size*px*.35});};
+   const seller=parties.find(p=>p.role==='seller'),buyer=parties.find(p=>p.role==='buyer');
+   const p=props[0];if(p){const y=78;put(`${p.city||''}${p.district||''}${p.section||''}${p.subsection||''}${p.number||''}`,88,y,205,25,8);put(p.share,294,y,47,25,8);put(p.area,343,y,86,25,8);put(p.price||m.taxTransferPrice,431,y,87,25,8);put(fmtDate(m.causeDate||m.contractDate),526,y,104,25,8);}
+   put(seller?.name,222,374,116,25,8);put(seller?.idNumber,341,374,82,25,7);put(seller?.address,456,374,168,25,7);put(buyer?.name,222,401,116,25,8);put(buyer?.idNumber,341,401,82,25,7);put(buyer?.address,456,401,168,25,7);
+  }
+ }else if(type.includes('sale')){
   const lands=props.filter(p=>p.kind==='土地'),buildings=props.filter(p=>p.kind==='建物');
   lands.forEach((a,i)=>{const x=295+i*65;[[a.district,232,93],[a.section,325,62],[a.subsection,387,62],[a.number,449,85],[a.area,534,107],[a.share,641,141]].forEach(([v,y,h])=>box(p,v,x,y,65,h,{size:12,label:'土地標示'}));});
   const floorNames=[...new Set(buildings.flatMap(a=>str(a.floor).split('\n').map(s=>s.trim()).filter(Boolean)))];
