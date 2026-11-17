@@ -1,0 +1,1009 @@
+{
+  "checkedAt": "2026-10-27",
+  "scope": "完整收錄兩個已存取官方目錄頁的書表下載項目；不宣稱涵蓋全臺所有機關全部法定書表。各機關版本分開保留，範例及說明不能當成空白範本。",
+  "sources": [
+    {
+      "id": "shulin",
+      "label": "新北市樹林地政事務所 本所各類申請書表 ODF",
+      "provider": "新北市樹林地政事務所",
+      "url": "https://www.shulin.land.ntpc.gov.tw/cp.aspx?n=10475",
+      "scope": "此頁所有書表列，含登記、測量、謄本、退費與其他類；未連結下載檔的列亦保留。",
+      "catalogCheckedAt": "2026-10-26"
+    },
+    {
+      "id": "hsinchu",
+      "label": "新竹市地政事務所 地政小幫手 應備文件快速查詢",
+      "provider": "新竹市地政事務所",
+      "url": "https://landeasy.hccg.gov.tw/content/?mode=data&parent_id=273",
+      "scope": "此頁所有登記原因列中的文件下載連結；每個登記原因情境保留個別來源版本、範例與說明。",
+      "catalogCheckedAt": "2026-10-26"
+    }
+  ],
+  "stats": {
+    "catalogEntries": 129,
+    "blank": 80,
+    "example": 27,
+    "instructions": 22,
+    "verifiedPdfSourceUrls": 40,
+    "blankPdfEntries": 39,
+    "uniqueLocalBlankPdfs": 24
+  },
+  "downloads": [
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(26).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "c48a06b54f1c7466c17d7adfe8da11ecc27406d78c813cd1af3d18e24f482f08",
+      "bytes": 80435,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-0ba6232db197.pdf",
+      "formIds": [
+        "hsinchu-0ba6232db197"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(25).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "6c912319af081085b37eb1ca9ddbb5b497394121d4fd1a5165b6113797deaf70",
+      "bytes": 103466,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        },
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        }
+      ],
+      "localFile": "library/hsinchu-15cc8fa46846.pdf",
+      "formIds": [
+        "hsinchu-6f20b0753a5f"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(24).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "6c912319af081085b37eb1ca9ddbb5b497394121d4fd1a5165b6113797deaf70",
+      "bytes": 103466,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        },
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        }
+      ],
+      "localFile": "library/hsinchu-15cc8fa46846.pdf",
+      "formIds": [
+        "hsinchu-15cc8fa46846"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地建築改良物所有權贈與移轉契約書(3).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "d5d66d5c4f9e315bcb0b9ecbb960d939da760f41b8d79294084da6d6f8ef0ece",
+      "bytes": 113658,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-d21047f8cc1e.pdf",
+      "formIds": [
+        "hsinchu-d21047f8cc1e"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地建築改良物抵押權設定契約書(1).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "3460828193aeacc0712d78c2e226189c88625aaa1c66443fc0da5846263c00b3",
+      "bytes": 122610,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-f8b47b14c49a.pdf",
+      "formIds": [
+        "hsinchu-f8b47b14c49a"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地建築改良物所有權買賣移轉契約書(1).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "7e5bc11fb6184e48b7f155cb2df4065a05cc16b15a6797b7c41d391659d96fd3",
+      "bytes": 120359,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-d0d8b4806c17.pdf",
+      "formIds": [
+        "hsinchu-d0d8b4806c17"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(27).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "6c912319af081085b37eb1ca9ddbb5b497394121d4fd1a5165b6113797deaf70",
+      "bytes": 103466,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        },
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        }
+      ],
+      "localFile": "library/hsinchu-15cc8fa46846.pdf",
+      "formIds": [
+        "hsinchu-06679f9bd015"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(12).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-045102300faa"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/切結書(3).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "e0d3802ba5cab99ca7f1a7039558ed5f6f0c177aaf8d369705b4c21da5dcb8a8",
+      "bytes": 56770,
+      "pageCount": 1,
+      "pages": [
+        {
+          "width": 841.92,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-d596d03012fc.pdf",
+      "formIds": [
+        "hsinchu-d596d03012fc"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(28).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "53cc1880aa8db0d8fa0239d2c0136e923e62e465d7993b9dbd59c5eac5125267",
+      "bytes": 80506,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-ed67f50fb1c4.pdf",
+      "formIds": [
+        "hsinchu-ed67f50fb1c4"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(13).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-8cfaba5ee313"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(29).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "683eec0b88792207d088cfddeb68f064dde7b88f489b1796c2f4f284dc8ce712",
+      "bytes": 80435,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-a34150298fe9.pdf",
+      "formIds": [
+        "hsinchu-a34150298fe9"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(14).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-797f7bd420bb"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(30).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "6c912319af081085b37eb1ca9ddbb5b497394121d4fd1a5165b6113797deaf70",
+      "bytes": 103466,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        },
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        }
+      ],
+      "localFile": "library/hsinchu-15cc8fa46846.pdf",
+      "formIds": [
+        "hsinchu-2fb6f5297ed6"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/共有土地建築改良物所有權分割契約書(2).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "8ef7e4b5b45385da94ef5ea2c77427ff416c9f89d4b7b90660a947ebf95cdb35",
+      "bytes": 116364,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-65454bcba127.pdf",
+      "formIds": [
+        "hsinchu-65454bcba127"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(31).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "c48a06b54f1c7466c17d7adfe8da11ecc27406d78c813cd1af3d18e24f482f08",
+      "bytes": 80435,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-0ba6232db197.pdf",
+      "formIds": [
+        "hsinchu-b3b06e62559a"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地建築改良物抵押權移轉變更契約書pdf.pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "0fc0a4a71ae895a8e912dfa8e5c0c27b2c0bae1284c1966cb88215642f68a7c4",
+      "bytes": 118968,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-e76e326c9f2a.pdf",
+      "formIds": [
+        "hsinchu-e76e326c9f2a"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/繼承系統表(1).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "495f7735da3a96ba1ee9942b0862449c9cf5585b127777ea2c45840943b8041b",
+      "bytes": 49963,
+      "pageCount": 1,
+      "pages": [
+        {
+          "width": 595.32,
+          "height": 841.92,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-45ea24f35558.pdf",
+      "formIds": [
+        "hsinchu-45ea24f35558"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地建築改良物信託契約書(2).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "a9d2e1e785786ae7680cb2f1c5880d4327148e5415944220b814c715897ff934",
+      "bytes": 120451,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 841.92,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 841.92,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-3e76a96224ad.pdf",
+      "formIds": [
+        "hsinchu-3e76a96224ad"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/遺產分割協議書(1).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "8575829a435099d71d75b110c922fdd7316458a28cabf8ab68f89a45d086957a",
+      "bytes": 87290,
+      "pageCount": 1,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 1190.64,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-dafe76b27cd2.pdf",
+      "formIds": [
+        "hsinchu-dafe76b27cd2"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/切結書(2).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "8a0d763e9ac0c7e3f2ee8f68f665b5b8c5789c0aee58bb461e214aa6c8502c10",
+      "bytes": 57185,
+      "pageCount": 1,
+      "pages": [
+        {
+          "width": 841.92,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-480d71ab09f7.pdf",
+      "formIds": [
+        "hsinchu-480d71ab09f7"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(33).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "6c912319af081085b37eb1ca9ddbb5b497394121d4fd1a5165b6113797deaf70",
+      "bytes": 103466,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        },
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        }
+      ],
+      "localFile": "library/hsinchu-15cc8fa46846.pdf",
+      "formIds": [
+        "hsinchu-33f7c00bf69c"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(15).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-366e5f99cd42"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(32).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b58a16a0346a45687d17f63f3c2ebb2ffdd14bf5fae27a6e282e28afeab87b7c",
+      "bytes": 80435,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-44a0113f0480.pdf",
+      "formIds": [
+        "hsinchu-44a0113f0480"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/預告登記同意書pdf.pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "c91cf721b3bb75b982e0a10df0175c41e2c1fcae93699362fc83ff42e5f6b5e9",
+      "bytes": 77352,
+      "pageCount": 1,
+      "pages": [
+        {
+          "width": 841.92,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-ddb97f12d094.pdf",
+      "formIds": [
+        "hsinchu-ddb97f12d094"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(34).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "6608c9295d986eb6540de5f6dbeecd3be8bd1156dfa6c87d57f20603e7be9ecd",
+      "bytes": 80426,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-029f26506bf3.pdf",
+      "formIds": [
+        "hsinchu-029f26506bf3"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(16).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-b500a1319127"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(17).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-2bc24367f90c"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(35).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "6c912319af081085b37eb1ca9ddbb5b497394121d4fd1a5165b6113797deaf70",
+      "bytes": 103466,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        },
+        {
+          "width": 595.22,
+          "height": 842,
+          "rotation": 90
+        }
+      ],
+      "localFile": "library/hsinchu-15cc8fa46846.pdf",
+      "formIds": [
+        "hsinchu-fa9433886458"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(36).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "7e2dd684b9ebcd864d5f3b7b6fda13c1fc7b610c109394c57e8497491d9f5adc",
+      "bytes": 80437,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-5d31147c9acc.pdf",
+      "formIds": [
+        "hsinchu-5d31147c9acc"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(18).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "0c5676be5094f633b8278eca7d08d9358b31e18bc8847576987b3af889d29186",
+      "bytes": 84810,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": null,
+      "formIds": [
+        "hsinchu-3d423b62b6c1"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(37).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "52a8f31f4c01e59212bd384dc428e026dd69f707ecd21c62de4816c062e1c9ac",
+      "bytes": 80435,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-c81786934346.pdf",
+      "formIds": [
+        "hsinchu-c81786934346"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(19).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-baf234ad2bda"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(38).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "6edba8f029baa652b885471762c7e04edc5e55b080d6ec447e636d54a7e57691",
+      "bytes": 80430,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-f635282e8d34.pdf",
+      "formIds": [
+        "hsinchu-f635282e8d34"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(20).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-5a132acf9c9e"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(39).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "d5b0436fbe2a0b60f93bae9d3a4a7d68a4e65bb7d13a81a9cab51b822965b3bb",
+      "bytes": 80441,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-8cea33d14da9.pdf",
+      "formIds": [
+        "hsinchu-8cea33d14da9"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(21).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-e012a4da56b5"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/塗銷預告登記同意書.pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "39db04485ec11ea78ced9b7e5e55a17596f9f0c499122bda2eea4db6b1ee0115",
+      "bytes": 56162,
+      "pageCount": 1,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-3c3f358aa574.pdf",
+      "formIds": [
+        "hsinchu-3c3f358aa574"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/土地登記申請書(40).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "45a33b6a7c5a7eb3c61ebead28ad63af1d3aa739eaf4da827d87cea470f09317",
+      "bytes": 80435,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-e243fde912cc.pdf",
+      "formIds": [
+        "hsinchu-e243fde912cc"
+      ],
+      "error": null
+    },
+    {
+      "url": "https://landeasy.hccg.gov.tw/archive/登記清冊(22).pdf",
+      "downloaded": true,
+      "readable": true,
+      "sha256": "b463f42bf675fcfec7c9a140245f6d0719efa68e89739ad6529b75276d0664c2",
+      "bytes": 67914,
+      "pageCount": 2,
+      "pages": [
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        },
+        {
+          "width": 842.04,
+          "height": 595.32,
+          "rotation": 0
+        }
+      ],
+      "localFile": "library/hsinchu-045102300faa.pdf",
+      "formIds": [
+        "hsinchu-a265f253b74f"
+      ],
+      "error": null
+    }
+  ],
+  "notes": [
+    "只有通過%PDF-檔頭、PDF-lib載入、頁數/旋轉及SHA-256核對，且內容未識別為範例的空白PDF才提供localFile。",
+    "相同SHA-256共用同一本地空白檔，來源版本及context仍各自保留。",
+    "未實際下載ODT/DOC、範例或說明檔時，保留官方目錄列出的遠端網址，不能把catalog-listed視為已驗證檔案。",
+    "hsinchu-3d423b62b6c1官方目錄之登記清冊連結實際為抵押權塗銷範例；已改列example，不收入本地空白PDF庫。"
+  ]
+}
