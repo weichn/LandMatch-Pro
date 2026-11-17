@@ -16,6 +16,12 @@ export const documentTypes = [
  {id:'tax-estate',label:'遺產稅申報書（國稅）',file:'tax/estate-tax-return.pdf'},
  {id:'tax-deed',label:'契稅申報書（地方稅｜新北市版）',file:'tax/deed-tax.pdf'},
  {id:'tax-land-value',label:'土地增值稅申報書（地方稅｜新北市版）',file:'tax/land-value-tax.pdf'},
+ {id:'tax-house-land',label:'個人房屋土地交易所得稅申報書（房地合一｜國稅）',file:'tax/house-land-income-tax.pdf'},
+ {id:'tax-landowner-no-rental',label:'土地所有權人無租賃情形申明書（地方稅｜新北市版）',file:'tax/landowner-no-rental.pdf'},
+ {id:'tax-resident-no-rental',label:'設籍人無租賃關係申明書（地方稅｜新北市版）',file:'tax/resident-no-rental.pdf'},
+ {id:'tax-resident-rental',label:'設籍人有租賃關係申明書（地方稅｜新北市版）',file:'tax/resident-rental.pdf'},
+ {id:'tax-land-self-use-once',label:'土地所有權人出售自用住宅申明書（一生一屋｜新北市版）',file:'tax/land-self-use-once.pdf'},
+ {id:'tax-land-self-use-order',label:'土地增值稅自用住宅用地適用順序申明書（新北市版）',file:'tax/land-self-use-order.pdf'},
 ];
 export const officialCatalog = 'https://landeasy.hccg.gov.tw/content/?mode=data&parent_id=273';
 export const addressLabels=['縣市','鄉鎮市區','村里','鄰','街路','段','巷','弄','號','樓'];
@@ -36,11 +42,14 @@ export function splitAddress(value='') {
 }
 const str=v=>String(v??'').trim();
 function validBirthDate(value){const raw=str(value).normalize('NFKC');if(!/^(?:民前|民國)?\s*[1-9]\d{0,3}\s*[/年.-]/.test(raw))return false;try{return !!parseBirthDate(raw);}catch{return false;}}
-function chosenProperties(data,type){return data.properties.filter(p=>p.included!==false&&(type!=='land-sale'||p.kind==='土地')&&(type!=='building-sale'||p.kind==='建物')&&(type!=='tax-land-value'||p.kind==='土地')&&(type!=='tax-deed'||p.kind==='建物'));}
+function chosenProperties(data,type){return data.properties.filter(p=>p.included!==false&&(type!=='land-sale'||p.kind==='土地')&&(type!=='building-sale'||p.kind==='建物'));}
 function roleGroup(data,type){
  if(type==='tax-gift')return ['donor','donee'];
  if(type==='tax-estate')return ['decedent','heir'];
  if(type==='tax-deed'||type==='tax-land-value')return ['buyer','seller'];
+ if(type==='tax-landowner-no-rental')return ['landowner'];
+ if(type==='tax-resident-no-rental'||type==='tax-resident-rental')return ['resident'];
+ if(type==='tax-land-self-use-once'||type==='tax-land-self-use-order')return ['declarant'];
  if(type==='mortgage'||(type==='application'&&data.meta.reason==='抵押權設定'))return ['creditor','mortgagor','debtor'];
  if(type==='gift'||(type==='application'&&data.meta.reason==='贈與'))return ['donee','donor'];
  if(type.startsWith('inheritance'))return ['heir','decedent'];
@@ -50,21 +59,22 @@ function roleGroup(data,type){
 function relevantParties(data,type){return data.parties.filter(p=>p.included!==false&&roleGroup(data,type).includes(p.role)).map(p=>p.personType==='legal'?{...p,birthDate:''}:p);}
 export function missingFields(data,type) {
  const missing=[],m=data.meta,ps=chosenProperties(data,type),parties=relevantParties(data,type);
- const tree=type==='inheritance-tree',inheritance=type.startsWith('inheritance')||type==='tax-estate',transfer=type.includes('sale')||type==='gift'||type==='tax-gift'||type==='tax-deed'||type==='tax-land-value';
+ const tree=type==='inheritance-tree',inheritance=type.startsWith('inheritance')||type==='tax-estate',transfer=type.includes('sale')||type==='gift'||type==='tax-gift'||type==='tax-deed'||type==='tax-land-value'||type==='tax-house-land';
  if(!tree&&!ps.length&&type!=='tax-estate')missing.push('至少一筆登記標的');
  if(!tree)ps.forEach((p,i)=>{for(const [k,l] of [['city','縣市'],['district','鄉鎮市區'],['section','段'],['number',p.kind==='土地'?'地號':'建號'],['area','面積'],['share',type==='mortgage'?'設定持分':'移轉持分']])if(!str(p[k]))missing.push(`標的 ${i+1} ${l}`);if(type==='inheritance-partition'&&!str(p.allocation))missing.push(`標的 ${i+1} 遺產權利人及繼承持分`);});
  if(type!=='application'&&!tree)ps.filter(p=>p.kind==='建物').forEach((p,i)=>{
   for(const [k,l] of [['address','建物門牌'],...(type!=='inheritance-partition'?[['land','基地坐落地號']]:[]),...(transfer?[['floor','層次'],['floorArea','各層面積']]:[])])if(!str(p[k]))missing.push(`建物 ${i+1} ${l}（無此項請明填「無」）`);
  });
- for(const role of roleGroup(data,type))if(!parties.some(p=>p.role===role))missing.push({buyer:'買受人',seller:'出賣人',creditor:'抵押權人',mortgagor:'設定義務人',debtor:'債務人',donee:'受贈人',donor:'贈與人',heir:'繼承人',decedent:'被繼承人'}[role]);
+ for(const role of roleGroup(data,type))if(!parties.some(p=>p.role===role))missing.push({buyer:'買受人',seller:'出賣人',creditor:'抵押權人',mortgagor:'設定義務人',debtor:'債務人',donee:'受贈人',donor:'贈與人',heir:'繼承人',decedent:'被繼承人',landowner:'土地所有權人',resident:'設籍人／實際使用人',declarant:'申明人'}[role]);
  parties.forEach((p,i)=>{for(const [k,l] of [['name','姓名／名稱'],...(!tree&&!inheritance&&p.role!=='decedent'?[['idNumber','統一編號'],['address','住所']]:[])])if(!str(p[k]))missing.push(`當事人 ${i+1} ${l}`);if(transfer&&!str(p.share))missing.push(`當事人 ${i+1} 持分`);if(tree&&p.role==='heir'&&!['配偶','長子','次子','三子','長女','次女','三女'].includes(p.relationship))missing.push(`繼承人 ${p.name||i+1} 親屬關係`);});
  parties.forEach((p,i)=>{
-  if(p.personType==='legal'||p.role==='decedent'||(inheritance&&!tree))return;
+  if(p.personType==='legal'||p.role==='decedent'||(inheritance&&!tree)||['tax-landowner-no-rental','tax-resident-no-rental','tax-resident-rental','tax-land-self-use-once','tax-land-self-use-order'].includes(type))return;
   if(!str(p.birthDate))missing.push(`當事人 ${i+1} 出生年月日`);
   else if(!validBirthDate(p.birthDate))missing.push(`當事人 ${i+1} 有效出生日期（民國年/月/日）`);
  });
   if(type==='application'){if(!str(m.landOffice)||!str(m.receivingCity))missing.push('受理縣市及地政事務所');if(!validRocDate(m.causeDate))missing.push('有效的原因發生日期（民國年/月/日）');if(!str(m.attachments))missing.push('附繳證件');if(str(m.agentName)){if(!str(m.agentId)||!str(m.agentAddress))missing.push('代理人統一編號及住所');if(!validBirthDate(m.agentBirthDate))missing.push('代理人有效出生年月日');}}
- else {if(!validRocDate(m.contractDate))missing.push('有效的立約日期（民國年/月/日）');}
+ else if(type==='tax-house-land'){if(!validRocDate(m.transferDate))missing.push('有效的房屋土地完成移轉登記日期');if(!str(m.totalPrice))missing.push('房屋土地交易成交總價');}
+ else if(!['inheritance-tree','tax-estate','tax-landowner-no-rental','tax-resident-no-rental','tax-resident-rental','tax-land-self-use-once','tax-land-self-use-order'].includes(type)){if(!validRocDate(m.contractDate))missing.push('有效的立約日期（民國年/月/日）');}
  if(inheritance&&!validRocDate(m.deathDate))missing.push('有效的被繼承人死亡日期（民國年/月/日）');
  if((type==='gift'||type==='tax-gift')&&!str(m.giftValue))missing.push('贈與權利價值');
  if(type.includes('sale')){if(type==='sale'&&!str(m.totalPrice))missing.push('買賣價款總金額');if(type==='land-sale'&&!str(m.landPrice))missing.push('土地價款');if(type==='building-sale'&&!str(m.buildingPrice))missing.push('建物價款');}
@@ -148,13 +158,16 @@ export async function createRegistrationPdf(data,type,{loadAsset,reviewed=false}
    heirs.slice(0,5).forEach((p,i)=>{const y=315+i*32;put(p.name,168,y,180,28,10);put(p.idNumber,348,y,155,28,9);put(p.address,504,y,245,28,8);});
   }else if(type==='tax-deed'){
    const page=first,px=page.getWidth()/936,py=page.getHeight()/1323,put=(value,x,y,w,h,size=11)=>{if(!str(value))return;let t=str(value);while(t.length>1&&font.widthOfTextAtSize(t,size*px)>w*px-3*px)t=t.slice(0,-1);page.drawText(t,{font,size:size*px,color:rgb(0,0,0),x:x*px+2*px,y:page.getHeight()-(y+h/2)*py-size*px*.35});};
-   const land=props.find(p=>p.kind==='建物'&&p.included!==false)||{};const seller=parties.find(p=>p.role==='seller'),buyer=parties.find(p=>p.role==='buyer');
+    const land=props.find(p=>p.kind==='建物')||{};const seller=parties.find(p=>p.role==='seller'),buyer=parties.find(p=>p.role==='buyer');
    put(land.number,273,69,114,23,10);put(`${land.city||''}${land.district||''}${land.address||''}`,430,69,420,23,9);put(fmtDate(m.contractDate),339,100,150,25,10);put(fmtDate(m.applicationDate),747,100,145,25,10);put(m.taxTransferPrice||m.buildingPrice||m.totalPrice,211,132,125,23,10);put(seller?.name,200,226,128,25,9);put(seller?.idNumber,330,226,105,25,8);put(seller?.address,513,226,257,25,8);put(buyer?.name,201,252,128,25,9);put(buyer?.idNumber,330,252,105,25,8);put(buyer?.address,513,252,257,25,8);
-  }else{
+   }else if(type==='tax-land-value'){
    const page=first,px=page.getWidth()/936,py=page.getHeight()/663,put=(value,x,y,w,h,size=10)=>{if(!str(value))return;let t=str(value);while(t.length>1&&font.widthOfTextAtSize(t,size*px)>w*px-3*px)t=t.slice(0,-1);page.drawText(t,{font,size:size*px,color:rgb(0,0,0),x:x*px+2*px,y:page.getHeight()-(y+h/2)*py-size*px*.35});};
    const seller=parties.find(p=>p.role==='seller'),buyer=parties.find(p=>p.role==='buyer');
-   const p=props[0];if(p){const y=78;put(`${p.city||''}${p.district||''}${p.section||''}${p.subsection||''}${p.number||''}`,88,y,205,25,8);put(p.share,294,y,47,25,8);put(p.area,343,y,86,25,8);put(p.price||m.taxTransferPrice,431,y,87,25,8);put(fmtDate(m.causeDate||m.contractDate),526,y,104,25,8);}
+    const p=props.find(item=>item.kind==='土地');if(p){const y=78;put(`${p.city||''}${p.district||''}${p.section||''}${p.subsection||''}${p.number||''}`,88,y,205,25,8);put(p.share,294,y,47,25,8);put(p.area,343,y,86,25,8);put(p.price||m.taxTransferPrice,431,y,87,25,8);put(fmtDate(m.causeDate||m.contractDate),526,y,104,25,8);}
    put(seller?.name,222,374,116,25,8);put(seller?.idNumber,341,374,82,25,7);put(seller?.address,456,374,168,25,7);put(buyer?.name,222,401,116,25,8);put(buyer?.idNumber,341,401,82,25,7);put(buyer?.address,456,401,168,25,7);
+   }else if(type==='tax-house-land'){
+    // The conditional official return is accompanied by a complete case-data
+    // appendix below so all entered parcels and case details are preserved.
   }
  }else if(type.includes('sale')){
   const lands=props.filter(p=>p.kind==='土地'),buildings=props.filter(p=>p.kind==='建物');
@@ -191,7 +204,32 @@ export async function createRegistrationPdf(data,type,{loadAsset,reviewed=false}
   if(applicants.length>6)throw new Error('申請人加代理人超過 6 位，請分批勾選或另備續頁。');
   applicants.forEach((a,i)=>{const y=215+i*30.7;box(q,({buyer:'權利人',seller:'義務人',agent:'代理人',creditor:'權利人',mortgagor:'義務人',debtor:'債務人',donee:'權利人',donor:'義務人',heir:'繼承人'})[a.role],169,y,100,30.7,{size:12});box(q,a.name,269,y,99,30.7,{size:12,label:'姓名'});box(q,a.birthDate,368,y,150,30.7,{size:13});box(q,a.idNumber,518,y,126,30.7,{size:13});address(q,a,[644,714,783,853,894,969,1008,1048,1088,1128,1208],y,30.7);});
  }
- pages.forEach((page,i)=>{box(page,`第 ${i+1} 頁／共 ${pages.length} 頁`,1030,951,300,22,{size:11});if(draft){page.drawText('待核對／待補填',{font,size:22,color:rgb(.65,.2,.15),opacity:.55,rotate:degrees(0),x:page.getWidth()*.40,y:16});}});
+  if(type.startsWith('tax-')){
+   const rows=[];
+   const appendixParties=(data.parties||[]).filter(p=>p.included!==false);
+   const field=(label,value)=>rows.push(`${label}：${str(value)||'（未輸入，請核填）'}`);
+   field('案件編號',data.caseNumber);field('登記原因',m.reason);field('立約日期',m.contractDate);field('移轉登記日期',m.transferDate);field('原因發生日',m.causeDate);field('申報日期',m.applicationDate);field('成交總價',m.totalPrice);field('贈與財產總價',m.giftValue);field('土地價款',m.landPrice);field('建物價款',m.buildingPrice);field('房屋移轉價格',m.taxTransferPrice);field('房屋稅籍編號',m.taxBuildingNumber);field('事務所',data.office?.name);field('事務所電話',data.office?.phone);field('事務所地址',data.office?.address);field('代理人',m.agentName);field('代理人身分字號',m.agentId);field('代理人電話',m.agentPhone);field('代理人住所',m.agentAddress);field('附繳證件',m.attachments);field('備註',m.notes);field('其他約定事項',m.otherTerms);field('抵押權種類',m.mortgageKind);field('擔保權利種類',m.mortgageRight);field('擔保債權總金額',m.mortgageAmount);field('擔保範圍',m.mortgageScope);field('清償日期',m.repayment);field('利息',m.interest);field('遲延利息',m.lateInterest);field('違約金',m.penalty);field('其他擔保條款',m.otherScope);
+   rows.push('【本案地籍標的｜來源：已核對謄本及本次套印輸入】');
+   if(props.length)props.forEach((p,i)=>{
+    rows.push(`${i+1}. ${p.kind}｜縣市 ${p.city||'待補'}｜行政區 ${p.district||'待補'}｜段 ${p.section||'待補'}｜小段 ${p.subsection||'無'}｜地／建號 ${p.number||'待補'}`);
+    rows.push(`　面積 ${p.area||'待補'} ㎡｜本次移轉／申報持分 ${p.share||'待核'}｜謄本原持分 ${p.originalShare||'未帶入'}｜所有權人持分 ${p.ownerShares?.map(owner=>`${owner.name||'未載姓名'} ${owner.share}`).join('；')||'未帶入'}｜申報價額 ${p.price||'待核填'}`);
+    if(p.kind==='建物'){
+     rows.push(`　門牌 ${p.address||'待補'}｜基地地號 ${p.land||'待補'}｜層次 ${p.floor||'待補'}｜各層面積 ${p.floorArea||'待補'}`);
+     rows.push(`　附屬建物 ${p.annex||'無資料'}｜面積 ${p.annexArea||'無資料'}｜共有部分建號 ${p.commonNumber||'無資料'}｜共有面積 ${p.commonArea||'無資料'}｜共有持分 ${p.commonShare||'無資料'}`);
+    }
+   }); else rows.push('（本案尚未匯入或勾選地籍標的）');
+   rows.push('【本次套印當事人｜身分證字號僅使用本次輸入，不從聯絡人名冊讀取】');
+   const roleLabel={buyer:'買受人',seller:'出賣人',donor:'贈與人',donee:'受贈人',decedent:'被繼承人',heir:'繼承人',creditor:'抵押權人',mortgagor:'設定義務人',debtor:'債務人',landowner:'土地所有權人',resident:'設籍人／實際使用人',declarant:'申明人'};
+   if(appendixParties.length)appendixParties.forEach((p,i)=>rows.push(`${i+1}. ${roleLabel[p.role]||'當事人'}｜${p.name||'待填姓名'}｜身分字號 ${p.idNumber||'待填'}｜出生日期 ${p.birthDate||'待填'}｜住所 ${p.address||'待填'}｜電話 ${p.phone||'待填'}｜本次持分 ${p.share||'待核填'}`)); else rows.push('（本案尚未加入當事人；請在案件套印的當事人區新增納稅義務人／交易當事人）');
+   if(m.deathDate)field('被繼承人死亡日期',m.deathDate);
+   rows.push('填表提醒：本附頁會隨官方原表一起列印，完整保留本案多筆地籍標示與已輸入資料，供對照填表。公告現值、前次移轉現值、稅籍、交易成本、繼承財產估值、自用資格及稅額等依法須以證明文件或個別申報事實判斷的欄位，請承辦人核實後填入官方原表。此附頁不是稅捐機關核發或取代官方申報表。');
+   const pageW=595.28,pageH=841.89,margin=38,lineH=17,maxWidth=pageW-margin*2;
+   let appendixPage,y;
+   const nextAppendixPage=()=>{appendixPage=pdf.addPage([pageW,pageH]);pages.push(appendixPage);y=pageH-48;appendixPage.drawText('案件資料套印附頁｜請與官方申報書併同核對',{font,size:13,color:rgb(.10,.28,.22),x:margin,y});y-=25;appendixPage.drawText(def.label,{font,size:10,color:rgb(.12,.16,.15),x:margin,y});y-=22;};
+   nextAppendixPage();
+   for(const row of rows){let line='';for(const char of row){const candidate=line+char;if(font.widthOfTextAtSize(candidate,9.5)>maxWidth){if(y<60)nextAppendixPage();appendixPage.drawText(line,{font,size:9.5,color:rgb(.12,.16,.15),x:margin,y});y-=lineH;line=char;}else line=candidate;}if(line){if(y<60)nextAppendixPage();appendixPage.drawText(line,{font,size:9.5,color:rgb(.12,.16,.15),x:margin,y});y-=lineH;}}
+  }
+  pages.forEach((page,i)=>{if(i<source.getPageCount())box(page,`第 ${i+1} 頁／共 ${pages.length} 頁`,1030,951,300,22,{size:11});if(draft&&i<source.getPageCount()){page.drawText('待核對／待補填',{font,size:22,color:rgb(.65,.2,.15),opacity:.55,rotate:degrees(0),x:page.getWidth()*.40,y:16});}});
  pdf.setTitle(def.label);pdf.setSubject(draft?'待核對或待補填文件':'已完成使用者核對的套印文件');pdf.setCreator('LandMatch Office');pdf.setProducer('LandMatch Office');
  return {bytes:await pdf.save(),draft,missing:incomplete};
 }

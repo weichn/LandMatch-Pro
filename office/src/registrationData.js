@@ -127,8 +127,9 @@ export function initialRegistrationData({caseRow, office, parties = [], transcri
  // caseRow deliberately does not supply parties, dates, price, or transaction shares.
  void caseRow;
  return {
+  caseNumber:text(caseRow?.case_number),
   office:{name:text(office?.name),phone:text(office?.phone),address:text(office?.address)},
-  meta:{landOffice:'',reason:text(caseRow?.registration_reason)||'買賣',causeDate:'',applicationDate:'',agentName:'',agentRegistration:'',agentId:'',agentPhone:'',agentAddress:'',attachments:'',notes:'',landPrice:'',buildingPrice:'',taxTransferPrice:'',taxBuildingNumber:'',mortgageKind:'普通',mortgageRight:'',mortgageAmount:'',mortgageScope:'',mortgageConfirmed:'',repayment:'',interest:'',lateInterest:'',penalty:'',otherScope:'',otherTerms:'',contractDate:''},
+  meta:{landOffice:'',reason:text(caseRow?.registration_reason)||'買賣',causeDate:'',contractDate:'',applicationDate:'',transferDate:'',deathDate:'',totalPrice:'',giftValue:'',agentName:'',agentRegistration:'',agentId:'',agentPhone:'',agentAddress:'',attachments:'',notes:'',landPrice:'',buildingPrice:'',taxTransferPrice:'',taxBuildingNumber:'',mortgageKind:'普通',mortgageRight:'',mortgageAmount:'',mortgageScope:'',mortgageConfirmed:'',repayment:'',interest:'',lateInterest:'',penalty:'',otherScope:'',otherTerms:''},
   properties, parties:mappedParties, sourceWarnings:[...new Set(sourceWarnings)]
  };
 }
